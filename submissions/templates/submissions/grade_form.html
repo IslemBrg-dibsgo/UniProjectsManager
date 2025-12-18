@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+
+{% block title %}Grade Submission{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'teacher_submissions' %}">Submissions</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'submission_detail' submission.pk %}">{{ submission.title }}</a></li>
+        <li class="breadcrumb-item active">Grade</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <!-- Submission Summary -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-folder me-2"></i>Submission Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <h4 class="mb-3">{{ submission.title }}</h4>
+                
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Classroom:</strong></p>
+                        <p class="text-muted">{{ submission.classroom.title }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p class="mb-1"><strong>Submitted:</strong></p>
+                        <p class="text-muted">{{ submission.submitted_at|date:"F d, Y at H:i" }}</p>
+                    </div>
+                </div>
+                
+                <p class="mb-1"><strong>Description:</strong></p>
+                <p class="text-muted">{{ submission.description|truncatewords:50 }}</p>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <a href="{{ submission.repository_url }}" target="_blank" class="btn btn-outline-dark w-100">
+                            <i class="bi bi-github me-2"></i>View Repository
+                        </a>
+                    </div>
+                    {% if submission.deployed_url %}
+                    <div class="col-md-6">
+                        <a href="{{ submission.deployed_url }}" target="_blank" class="btn btn-outline-primary w-100">
+                            <i class="bi bi-globe me-2"></i>View Live Demo
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <p class="mb-2"><strong>Collaborators:</strong></p>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for collaborator in submission.collaborators.all %}
+                    <span class="badge bg-light text-dark border py-2 px-3">
+                        <i class="bi bi-person-circle me-1"></i>
+                        {{ collaborator.get_full_name|default:collaborator.username }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grading Form -->
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>Assign Grade
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="row mb-4">
+                        <div class="col-md-4">
+                            <label for="id_grade" class="form-label">Grade (1-20) <span class="text-danger">*</span></label>
+                            {{ form.grade }}
+                            {% if form.grade.help_text %}
+                            <div class="form-text">{{ form.grade.help_text }}</div>
+                            {% endif %}
+                            {% if form.grade.errors %}
+                            <div class="invalid-feedback d-block">{{ form.grade.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Grade Scale Reference</label>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <span class="badge grade-excellent py-2 px-3">16-20: Excellent</span>
+                                <span class="badge grade-good py-2 px-3">12-15: Good</span>
+                                <span class="badge grade-average py-2 px-3">10-11: Average</span>
+                                <span class="badge grade-poor py-2 px-3">1-9: Poor</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="id_teacher_notes" class="form-label">Feedback & Notes</label>
+                        {{ form.teacher_notes }}
+                        {% if form.teacher_notes.help_text %}
+                        <div class="form-text">{{ form.teacher_notes.help_text }}</div>
+                        {% endif %}
+                        {% if form.teacher_notes.errors %}
+                        <div class="invalid-feedback d-block">{{ form.teacher_notes.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle me-2"></i>
+                        The grade and feedback will be immediately visible to all collaborators.
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'submission_detail' submission.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-lg me-1"></i> 
+                            {% if submission.grade %}Update Grade{% else %}Assign Grade{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        {% if submission.grade %}
+        <div class="card mb-4 border-success">
+            <div class="card-header bg-success text-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-check-circle me-2"></i>Current Grade
+                </h6>
+            </div>
+            <div class="card-body text-center">
+                <div class="grade-badge {% if submission.grade >= 16 %}grade-excellent{% elif submission.grade >= 12 %}grade-good{% elif submission.grade >= 10 %}grade-average{% else %}grade-poor{% endif %}" style="font-size: 2rem;">
+                    {{ submission.grade }}/20
+                </div>
+                {% if submission.teacher_notes %}
+                <hr>
+                <p class="small text-muted mb-0">{{ submission.teacher_notes|truncatewords:30 }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <div class="card bg-light border-0">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb me-2 text-warning"></i>Grading Tips
+                </h6>
+                <ul class="small text-muted mb-0 ps-3">
+                    <li class="mb-2">Review the repository code quality and structure</li>
+                    <li class="mb-2">Check if the project meets the requirements</li>
+                    <li class="mb-2">Test the deployed version if available</li>
+                    <li class="mb-2">Provide constructive feedback</li>
+                    <li>Be consistent with your grading criteria</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

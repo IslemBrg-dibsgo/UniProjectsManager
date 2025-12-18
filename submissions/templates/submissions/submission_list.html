@@ -1,0 +1,174 @@
+{% extends 'base.html' %}
+
+{% block title %}My Submissions{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 mb-1">My Submissions</h1>
+        <p class="text-muted mb-0">View and manage your project submissions</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Status</label>
+                {{ filter_form.status }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted">Classroom</label>
+                {{ filter_form.classroom }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Min Grade</label>
+                {{ filter_form.grade_min }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted">Max Grade</label>
+                {{ filter_form.grade_max }}
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-funnel me-1"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Submissions List -->
+{% if submissions %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th>Project</th>
+                    <th>Classroom</th>
+                    <th>Collaborators</th>
+                    <th>Status</th>
+                    <th>Grade</th>
+                    <th>Date</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for submission in submissions %}
+                <tr>
+                    <td>
+                        <a href="{% url 'submission_detail' submission.pk %}" class="text-decoration-none">
+                            <strong>{{ submission.title }}</strong>
+                        </a>
+                        <br>
+                        <small class="text-muted">{{ submission.description|truncatewords:10 }}</small>
+                    </td>
+                    <td>
+                        <a href="{% url 'classroom_detail' submission.classroom.pk %}" class="text-decoration-none">
+                            {{ submission.classroom.title }}
+                        </a>
+                    </td>
+                    <td>
+                        <small>
+                            {% for collaborator in submission.collaborators.all|slice:":3" %}
+                            {{ collaborator.first_name|default:collaborator.username }}{% if not forloop.last %}, {% endif %}
+                            {% endfor %}
+                            {% if submission.collaborators.count > 3 %}
+                            +{{ submission.collaborators.count|add:"-3" }}
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td>
+                        {% if submission.grade %}
+                        <span class="badge badge-graded">Graded</span>
+                        {% elif submission.status == 'SUBMITTED' %}
+                        <span class="badge badge-submitted">Submitted</span>
+                        {% else %}
+                        <span class="badge badge-draft">Draft</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if submission.grade %}
+                        <span class="{% if submission.grade >= 16 %}text-success{% elif submission.grade >= 10 %}text-primary{% else %}text-danger{% endif %} fw-bold">
+                            {{ submission.grade }}/20
+                        </span>
+                        {% else %}
+                        <span class="text-muted">--</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <small class="text-muted">
+                            {% if submission.submitted_at %}
+                            {{ submission.submitted_at|date:"M d, Y" }}
+                            {% else %}
+                            {{ submission.created_at|date:"M d, Y" }}
+                            {% endif %}
+                        </small>
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{% url 'submission_detail' submission.pk %}" class="btn btn-outline-primary">
+                                <i class="bi bi-eye"></i>
+                            </a>
+                            {% if submission.is_draft %}
+                            <a href="{% url 'submission_update' submission.pk %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Pagination -->
+{% if page_obj.has_other_pages %}
+<nav class="mt-4">
+    <ul class="pagination justify-content-center">
+        {% if page_obj.has_previous %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                <i class="bi bi-chevron-left"></i> Previous
+            </a>
+        </li>
+        {% endif %}
+        
+        {% for num in page_obj.paginator.page_range %}
+            {% if page_obj.number == num %}
+            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+            {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
+            </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page_obj.has_next %}
+        <li class="page-item">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
+                Next <i class="bi bi-chevron-right"></i>
+            </a>
+        </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+
+{% else %}
+<div class="card">
+    <div class="card-body empty-state">
+        <i class="bi bi-folder"></i>
+        <h5>No Submissions Found</h5>
+        <p>You haven't created any project submissions yet</p>
+        <a href="{% url 'classroom_list' %}" class="btn btn-primary">
+            <i class="bi bi-collection me-1"></i> Go to Classrooms
+        </a>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

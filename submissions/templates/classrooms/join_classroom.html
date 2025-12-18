@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+
+{% block title %}Join Classroom{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-5">
+        <div class="card">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex p-4 mb-3">
+                        <i class="bi bi-door-open text-primary fs-1"></i>
+                    </div>
+                    <h3>Join a Classroom</h3>
+                    <p class="text-muted">Enter the 8-character code provided by your teacher</p>
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="id_join_code" class="form-label visually-hidden">Join Code</label>
+                        {{ form.join_code }}
+                        {% if form.join_code.help_text %}
+                        <div class="form-text text-center">{{ form.join_code.help_text }}</div>
+                        {% endif %}
+                        {% if form.join_code.errors %}
+                        <div class="invalid-feedback d-block text-center">{{ form.join_code.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <button type="submit" class="btn btn-primary btn-lg w-100">
+                        <i class="bi bi-check-lg me-1"></i> Join Classroom
+                    </button>
+                </form>
+                
+                <hr class="my-4">
+                
+                <div class="text-center">
+                    <a href="{% url 'classroom_list' %}" class="text-muted">
+                        <i class="bi bi-arrow-left me-1"></i> Back to My Classrooms
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card mt-4 bg-light border-0">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-question-circle me-2"></i>How to get a join code?
+                </h6>
+                <p class="card-text small text-muted mb-0">
+                    Ask your teacher for the classroom join code. It's an 8-character code 
+                    that looks like <code>ABC12DEF</code>. Each classroom has a unique code.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Auto-uppercase the join code input
+    document.getElementById('id_join_code').addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase();
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block title %}Submit Project{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card border-primary">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-send me-2"></i>Submit Project
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="text-center mb-4">
+                    <i class="bi bi-send text-primary" style="font-size: 4rem;"></i>
+                </div>
+                
+                <h5 class="text-center mb-3">Ready to submit your project?</h5>
+                
+                <div class="alert alert-light">
+                    <strong>{{ submission.title }}</strong>
+                    <br>
+                    <small class="text-muted">
+                        Classroom: {{ submission.classroom.title }}
+                    </small>
+                </div>
+                
+                <div class="card bg-light border-0 mb-4">
+                    <div class="card-body">
+                        <h6>Submission Summary</h6>
+                        <ul class="mb-0">
+                            <li><strong>Repository:</strong> <a href="{{ submission.repository_url }}" target="_blank">{{ submission.repository_url|truncatechars:40 }}</a></li>
+                            {% if submission.deployed_url %}
+                            <li><strong>Live Demo:</strong> <a href="{{ submission.deployed_url }}" target="_blank">{{ submission.deployed_url|truncatechars:40 }}</a></li>
+                            {% endif %}
+                            <li><strong>Collaborators:</strong> {{ submission.collaborators.count }}</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    <strong>Important:</strong> Once submitted, you will not be able to edit this project. 
+                    Make sure all information is correct before proceeding.
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-check mb-4">
+                        {{ form.confirm }}
+                        <label class="form-check-label" for="id_confirm">
+                            {{ form.confirm.label }}
+                        </label>
+                        {% if form.confirm.errors %}
+                        <div class="invalid-feedback d-block">{{ form.confirm.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'submission_detail' submission.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Go Back
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-send me-1"></i> Submit Project
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

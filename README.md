@@ -1,284 +1,402 @@
 # University Project Submission Platform
 
-A Django-based platform for managing university project submissions, demonstrating mastery of Django fundamentals including Authentication, Forms, CRUD operations, Filtering, and Class-Based Views.
+A comprehensive Django web application for managing university project submissions, built entirely with Django's class-based views. This platform enables teachers to create project assignments (classrooms) and students to submit their projects, with grading and collaboration features.
 
-## Architecture Overview
+## Features
 
-### Design Philosophy
+### For Teachers
+- 📚 **Create and Manage Classrooms** - Create project assignments with descriptions and requirements
+- 🔑 **Join Code System** - Each classroom has a unique 8-character join code for students
+- 👥 **Student Management** - View enrolled students and manage memberships
+- 📊 **Grade Submissions** - Grade student projects with feedback (scale 1-20)
+- 📧 **Email Notifications** - Automatic notifications for new submissions
+- 📈 **Dashboard** - Overview of classrooms, students, and pending submissions
 
-This project follows Django best practices with a focus on:
-- **Clean separation of concerns**: Models handle data, Forms handle validation, Views handle logic
-- **Role-Based Access Control (RBAC)**: Permissions enforced at both view and queryset levels
-- **Class-Based Views only**: Demonstrating proper use of Django's CBV system
-- **DRY principles**: Reusable mixins and forms
+### For Students
+- 🎓 **Join Classrooms** - Join classrooms using teacher-provided join codes
+- 📝 **Submit Projects** - Create and submit project assignments
+- 👨‍👩‍👧‍👦 **Team Collaboration** - Add collaborators from the same classroom
+- 🔗 **Repository Links** - Submit GitHub/GitLab repository and deployment URLs
+- ✏️ **Draft Mode** - Save drafts and edit before final submission
+- 📬 **Grade Notifications** - Receive email notifications when graded
 
-### Models Architecture
+### Technical Features
+- **Class-Based Views** - Built entirely with Django's generic class-based views
+- **Custom Permissions** - Role-based access control (Teacher/Student)
+- **Signal-Based Notifications** - Django signals trigger email notifications
+- **File Uploads** - Upload project requirement documents
+- **Advanced Filtering** - Filter submissions by status, grade, classroom, etc.
+- **Responsive Design** - Bootstrap 5 for mobile-friendly UI
 
-```
-┌─────────────────┐     ┌──────────────────┐
-│      User       │────▶│  TeacherProfile  │
-│  (Django Auth)  │     │   (One-to-One)   │
-└────────┬────────┘     └──────────────────┘
-         │
-         │ ForeignKey (teacher)
-         ▼
-┌─────────────────┐     ┌──────────────────────┐
-│    Classroom    │◀────│  ClassroomMembership │
-│                 │     │   (student + joined) │
-└────────┬────────┘     └──────────────────────┘
-         │                        │
-         │ ForeignKey             │ ForeignKey (student)
-         ▼                        ▼
-┌─────────────────────────────────────────────┐
-│            ProjectSubmission                 │
-│  - title, description                        │
-│  - repository_url (required)                 │
-│  - deployed_url (optional)                   │
-│  - collaborators (M2M to User)               │
-│  - status (DRAFT/SUBMITTED)                  │
-│  - grade (1-20, nullable)                    │
-│  - teacher_notes                             │
-└─────────────────────────────────────────────┘
-```
-
-### Key Design Decisions
-
-#### 1. TeacherProfile vs Groups
-Instead of using Django's built-in Groups for role management, we use a separate `TeacherProfile` model:
-- **Pros**: Cleaner permission checks (`hasattr(user, 'teacher_profile')`), allows teacher-specific fields
-- **Cons**: Requires explicit profile creation during registration
-
-#### 2. ClassroomMembership as Explicit Model
-Rather than using `ManyToManyField` directly:
-- Stores `joined_at` timestamp
-- Allows for future metadata (status, notes)
-- Cleaner queries for membership validation
-
-#### 3. Status Workflow
-Simple two-state workflow: `DRAFT` → `SUBMITTED`
-- One-way transition (no reverting to draft)
-- `submitted_at` timestamp set automatically
-- Editing locked after submission
-
-#### 4. Permission Enforcement
-Dual-layer security:
-1. **View Level**: Custom mixins (`TeacherRequiredMixin`, `StudentRequiredMixin`, etc.)
-2. **Queryset Level**: `get_queryset()` filters data based on user permissions
-
-## File Structure
+## Project Structure
 
 ```
-project/
-├── models.py          # Data models with validation
-├── forms.py           # ModelForms and custom forms
-├── views.py           # Class-Based Views only
-├── urls.py            # URL routing
-├── admin.py           # Admin configuration
-└── templates/         # HTML templates (not included)
-    ├── accounts/
-    │   ├── login.html
-    │   ├── register_student.html
-    │   └── register_teacher.html
-    ├── classrooms/
-    │   ├── classroom_list.html
-    │   ├── classroom_detail.html
-    │   ├── classroom_form.html
-    │   ├── classroom_confirm_delete.html
-    │   ├── join_classroom.html
-    │   └── leave_classroom_confirm.html
-    ├── submissions/
-    │   ├── submission_list.html
-    │   ├── submission_detail.html
-    │   ├── submission_form.html
-    │   ├── submission_confirm_delete.html
-    │   ├── submission_submit_confirm.html
-    │   ├── teacher_submission_list.html
-    │   ├── grade_submission.html
-    │   └── my_grades.html
-    └── dashboard.html
+UniProjectsManager/
+├── manage.py                    # Django management script
+├── requirements.txt             # Python dependencies
+├── README.md                    # This file
+├── .gitignore                   # Git ignore rules
+│
+├── uniprojects/                 # Main project configuration
+│   ├── __init__.py
+│   ├── settings.py              # Django settings
+│   ├── urls.py                  # Root URL configuration
+│   ├── wsgi.py                  # WSGI configuration
+│   └── asgi.py                  # ASGI configuration
+│
+├── submissions/                 # Main Django app
+│   ├── models.py                # Database models (User, Classroom, Submission)
+│   ├── views.py                 # Class-based views
+│   ├── forms.py                 # Django forms
+│   ├── urls.py                  # App URL patterns
+│   ├── admin.py                 # Admin interface customization
+│   ├── signals.py               # Email notification signals
+│   ├── apps.py                  # App configuration
+│   ├── tests.py                 # Unit tests
+│   │
+│   ├── services/                # Business logic services
+│   │   ├── __init__.py
+│   │   └── email_service.py     # Email handling service
+│   │
+│   └── templates/               # HTML templates
+│       ├── base.html
+│       ├── dashboard_student.html
+│       ├── dashboard_teacher.html
+│       ├── classrooms/          # Classroom templates
+│       ├── submissions/         # Submission templates
+│       ├── registration/        # Auth templates
+│       └── emails/              # Email templates
+│
+├── static/                      # Static files (CSS, JS)
+│   ├── css/
+│   │   └── style.css
+│   └── js/
+│       └── main.js
+│
+└── media/                       # User-uploaded files
+    └── classroom_requirements/  # Uploaded requirement documents
 ```
 
-## Views Summary
+## Installation
 
-### Authentication Views
-| View | Type | Description |
-|------|------|-------------|
-| `CustomLoginView` | LoginView | User login |
-| `CustomLogoutView` | LogoutView | User logout |
-| `StudentRegisterView` | CreateView | Student registration |
-| `TeacherRegisterView` | CreateView | Teacher registration |
+### Prerequisites
+- Python 3.8 or higher
+- pip (Python package manager)
+- Virtual environment (recommended)
 
-### Dashboard
-| View | Type | Description |
-|------|------|-------------|
-| `DashboardView` | TemplateView | Role-based dashboard |
+### Setup Instructions
 
-### Classroom Views
-| View | Type | Access | Description |
-|------|------|--------|-------------|
-| `ClassroomListView` | ListView | All | List classrooms (filtered by role) |
-| `ClassroomDetailView` | DetailView | Members | Classroom details |
-| `ClassroomCreateView` | CreateView | Teachers | Create classroom |
-| `ClassroomUpdateView` | UpdateView | Owner | Edit classroom |
-| `ClassroomDeleteView` | DeleteView | Owner | Delete classroom |
-| `JoinClassroomView` | FormView | Students | Join via code |
-| `LeaveClassroomView` | DeleteView | Students | Leave classroom |
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd UniProjectsManager
+   ```
 
-### Submission Views
-| View | Type | Access | Description |
-|------|------|--------|-------------|
-| `SubmissionListView` | ListView | All | List submissions |
-| `SubmissionDetailView` | DetailView | Participants | Submission details |
-| `SubmissionCreateView` | CreateView | Members | Create submission |
-| `SubmissionUpdateView` | UpdateView | Creator (Draft) | Edit submission |
-| `SubmissionSubmitView` | FormView | Creator (Draft) | Submit project |
-| `SubmissionDeleteView` | DeleteView | Creator (Draft) | Delete submission |
+2. **Create and activate virtual environment**
+   
+   **Windows:**
+   ```bash
+   python -m venv venv
+   venv\Scripts\activate
+   ```
+   
+   **macOS/Linux:**
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
 
-### Teacher Grading Views
-| View | Type | Access | Description |
-|------|------|--------|-------------|
-| `TeacherSubmissionListView` | ListView | Teachers | List for grading |
-| `GradeSubmissionView` | UpdateView | Teachers | Grade submission |
+3. **Install dependencies**
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Student Grade Views
-| View | Type | Access | Description |
-|------|------|--------|-------------|
-| `MyGradesView` | ListView | Students | View all grades |
+4. **Apply database migrations**
+   ```bash
+   python manage.py makemigrations
+   python manage.py migrate
+   ```
 
-## Forms Summary
+5. **Create a superuser (admin account)**
+   ```bash
+   python manage.py createsuperuser
+   ```
+   Follow the prompts to create an admin account.
 
-| Form | Type | Purpose |
-|------|------|---------|
-| `StudentRegistrationForm` | UserCreationForm | Student signup |
-| `TeacherRegistrationForm` | UserCreationForm | Teacher signup |
-| `ClassroomCreateForm` | ModelForm | Create classroom |
-| `ClassroomUpdateForm` | ModelForm | Edit classroom |
-| `JoinClassroomForm` | Form | Join via code |
-| `ProjectSubmissionCreateForm` | ModelForm | Create submission |
-| `ProjectSubmissionUpdateForm` | ModelForm | Edit submission |
-| `ProjectSubmitForm` | Form | Confirm submission |
-| `GradeSubmissionForm` | ModelForm | Grade project |
-| `SubmissionFilterForm` | Form | Filter submissions |
-| `ClassroomFilterForm` | Form | Filter classrooms |
+6. **Collect static files (for production)**
+   ```bash
+   python manage.py collectstatic
+   ```
 
-## Filtering & Pagination
+7. **Run the development server**
+   ```bash
+   python manage.py runserver
+   ```
 
-### Available Filters
-- **Status**: Draft, Submitted, Graded
-- **Grade Range**: Min/Max (1-20)
-- **Classroom**: Filter by specific classroom
-- **Student**: Filter by student (teachers only)
-- **Search**: Text search on title
+8. **Access the application**
+   - Main site: http://localhost:8000
+   - Admin panel: http://localhost:8000/admin
 
-### Pagination
-All list views use `paginate_by = 10` with Django's built-in pagination.
+## Usage Guide
 
-## Permission Matrix
+### First Steps
 
-| Action | Student | Teacher |
-|--------|---------|---------|
-| Register | ✓ | ✓ |
-| Create Classroom | ✗ | ✓ |
-| Join Classroom | ✓ | ✗ |
-| View Own Classrooms | ✓ | ✓ |
-| Create Submission | ✓ (member) | ✗ |
-| Edit Submission | ✓ (creator, draft) | ✗ |
-| Submit Project | ✓ (creator, draft) | ✗ |
-| View Submission | ✓ (participant) | ✓ (owner) |
-| Grade Submission | ✗ | ✓ (owner) |
-| View Grades | ✓ (own) | ✓ (all) |
+1. **Register an account** at `/auth/register/`
+   - Choose "Register as Teacher" for teacher accounts
+   - Leave unchecked for student accounts
 
-## Setup Instructions
+2. **Login** at `/auth/login/`
 
-### 1. Add to INSTALLED_APPS
+### As a Teacher
+
+1. **Create a classroom** from your dashboard
+   - Add title, description, and optional requirements file
+   - A unique join code will be generated automatically
+
+2. **Share the join code** with your students
+
+3. **View submissions** when students submit their projects
+
+4. **Grade submissions** with a score (1-20) and feedback
+
+### As a Student
+
+1. **Join a classroom** using the teacher's join code
+
+2. **Create a submission** in the classroom
+   - Add project details and repository URL
+   - Select team members (collaborators)
+   - Save as draft or submit immediately
+
+3. **Submit your project** when ready (converts draft to submitted)
+
+4. **View your grade** and teacher feedback once graded
+
+## Configuration
+
+### Email Settings
+
+By default, emails are printed to the console (development mode).
+
+To configure real email sending, edit `uniprojects/settings.py`:
+
 ```python
-INSTALLED_APPS = [
-    ...
-    'submissions',  # or your app name
-]
+# For Gmail
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your-email@gmail.com'
+EMAIL_HOST_PASSWORD = 'your-app-password'
+DEFAULT_FROM_EMAIL = 'noreply@university.edu'
 ```
 
-### 2. Configure Authentication
+### Database
+
+The default configuration uses SQLite. For production, consider PostgreSQL:
+
 ```python
-LOGIN_URL = 'login'
-LOGIN_REDIRECT_URL = 'dashboard'
-LOGOUT_REDIRECT_URL = 'login'
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'uniprojects_db',
+        'USER': 'your_db_user',
+        'PASSWORD': 'your_db_password',
+        'HOST': 'localhost',
+        'PORT': '5432',
+    }
+}
 ```
 
-### 3. Include URLs
-```python
-# project/urls.py
-from django.urls import path, include
+Don't forget to install `psycopg2-binary`: `pip install psycopg2-binary`
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('submissions.urls')),
-]
+### Security Settings
+
+Before deploying to production:
+
+1. Change `SECRET_KEY` in settings.py
+2. Set `DEBUG = False`
+3. Update `ALLOWED_HOSTS`
+4. Enable HTTPS-only cookies:
+   ```python
+   CSRF_COOKIE_SECURE = True
+   SESSION_COOKIE_SECURE = True
+   ```
+
+## Models Overview
+
+### User
+- Extended Django `AbstractUser`
+- Added `is_teacher` boolean field
+- Role-based permissions
+
+### Classroom
+- Represents a project assignment
+- Has unique join code for enrollment
+- Belongs to one teacher
+- Can have many student members
+
+### ClassroomMembership
+- Links students to classrooms
+- Tracks join date
+
+### ProjectSubmission
+- Student project submission
+- Can have multiple collaborators
+- Status: DRAFT or SUBMITTED
+- Grade: 1-20 scale
+- Includes repository URL and optional deployed URL
+
+## URL Structure
+
+```
+/                                  Dashboard (role-aware)
+/auth/register/                    User registration
+/auth/login/                       User login
+/auth/logout/                      User logout
+
+/classrooms/                       List classrooms
+/classrooms/create/                Create classroom (teachers)
+/classrooms/join/                  Join classroom (students)
+/classrooms/<id>/                  Classroom detail
+/classrooms/<id>/edit/             Edit classroom
+/classrooms/<id>/members/          View members
+/classrooms/<id>/submissions/      Classroom submissions (teachers)
+
+/submissions/                      List submissions
+/submissions/<id>/                 Submission detail
+/submissions/<id>/edit/            Edit submission (draft only)
+/submissions/<id>/submit/          Submit project
+/submissions/<id>/grade/           Grade submission (teachers)
+
+/admin/                            Django admin panel
 ```
 
-### 4. Run Migrations
+## Management Commands
+
+Django provides several useful management commands:
+
 ```bash
+# Create database migrations
+python manage.py makemigrations
+
+# Apply migrations
+python manage.py migrate
+
+# Create superuser
+python manage.py createsuperuser
+
+# Run development server
+python manage.py runserver
+
+# Open Django shell
+python manage.py shell
+
+# Collect static files
+python manage.py collectstatic
+
+# Run tests
+python manage.py test
+```
+
+## Development
+
+### Adding New Features
+
+1. Models: Update `submissions/models.py`
+2. Views: Add to `submissions/views.py`
+3. URLs: Update `submissions/urls.py`
+4. Templates: Add to `submissions/templates/`
+5. Run migrations if models changed
+
+### Testing
+
+Run the test suite:
+```bash
+python manage.py test submissions
+```
+
+## Deployment
+
+### Production Checklist
+
+- [ ] Set `DEBUG = False`
+- [ ] Configure `SECRET_KEY` from environment variable
+- [ ] Set proper `ALLOWED_HOSTS`
+- [ ] Configure production database (PostgreSQL)
+- [ ] Set up email backend (SendGrid, AWS SES, etc.)
+- [ ] Configure static file serving (WhiteNoise or CDN)
+- [ ] Set up media file storage (AWS S3 or similar)
+- [ ] Enable HTTPS
+- [ ] Configure logging
+- [ ] Set up backup strategy
+
+### Deployment Options
+
+**Option 1: Traditional Server**
+- Use Gunicorn as WSGI server
+- Nginx as reverse proxy
+- PostgreSQL database
+
+**Option 2: Platform as a Service**
+- Heroku
+- PythonAnywhere
+- Railway
+- Render
+
+**Option 3: Cloud Providers**
+- AWS Elastic Beanstalk
+- Google Cloud Run
+- Azure App Service
+
+## Troubleshooting
+
+### Database Issues
+```bash
+# Reset database (development only)
+python manage.py flush
+
+# Reset migrations (development only)
+python manage.py migrate submissions zero
 python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 5. Create Superuser
+### Static Files Not Loading
 ```bash
-python manage.py createsuperuser
+python manage.py collectstatic --clear
 ```
 
-### 6. Create Templates
-Create the template files as listed in the file structure above.
+### Permission Errors
+- Ensure your user has proper `is_teacher` flag set in admin panel
+- Check if user is authenticated
 
-## Security Considerations
+## Contributing
 
-1. **CSRF Protection**: All forms use Django's CSRF middleware
-2. **Permission Checks**: Dual-layer (view + queryset)
-3. **Input Validation**: ModelForm validation + custom clean methods
-4. **SQL Injection**: Protected by Django ORM
-5. **XSS**: Template auto-escaping enabled
-
-## Testing Recommendations
-
-```python
-# Example test cases to implement
-class ClassroomTests(TestCase):
-    def test_only_teachers_can_create_classrooms(self):
-        pass
-    
-    def test_students_can_join_with_valid_code(self):
-        pass
-    
-    def test_invalid_join_code_rejected(self):
-        pass
-
-class SubmissionTests(TestCase):
-    def test_only_members_can_create_submissions(self):
-        pass
-    
-    def test_submission_locked_after_submit(self):
-        pass
-    
-    def test_collaborators_limited_to_classroom(self):
-        pass
-
-class GradingTests(TestCase):
-    def test_only_teacher_can_grade(self):
-        pass
-    
-    def test_grade_range_validation(self):
-        pass
-```
-
-## Future Enhancements
-
-1. **Email Notifications**: Notify students when graded
-2. **File Attachments**: Allow file uploads with submissions
-3. **Deadline Management**: Add due dates to classrooms
-4. **Comments System**: Teacher-student communication
-5. **Analytics Dashboard**: Grade statistics and trends
-6. **API Endpoints**: REST API for mobile apps
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Write/update tests
+5. Submit a pull request
 
 ## License
 
-This project is for educational purposes as part of university coursework.
+This project is created for educational purposes.
+
+## Support
+
+For issues and questions:
+- Check the Django documentation: https://docs.djangoproject.com/
+- Review the code comments and docstrings
+- Open an issue in the repository
+
+## Acknowledgments
+
+- Built with Django 5.0
+- UI powered by Bootstrap 5
+- Icons from Bootstrap Icons
+- Template architecture inspired by Django best practices
+
+---
+
+**Made with ❤️ using Django Class-Based Views**

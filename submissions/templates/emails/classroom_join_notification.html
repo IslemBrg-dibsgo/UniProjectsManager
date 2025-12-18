@@ -1,0 +1,52 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}New Student Joined Your Classroom{% endblock %}
+
+{% block content %}
+<h2>New Student Joined!</h2>
+
+<p>Hello {{ teacher_name }},</p>
+
+<p>A new student has joined your classroom using the join code.</p>
+
+<div class="info-box">
+    <h3>{{ classroom_title }}</h3>
+    <p>Total students enrolled: {{ total_students }}</p>
+</div>
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 120px;">Student Name</span>
+            <span style="color: #1a1a2e; font-size: 14px; font-weight: 600;">{{ student_name }}</span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 120px;">Email</span>
+            <span style="color: #1a1a2e; font-size: 14px;">
+                <a href="mailto:{{ student_email }}" style="color: #4f46e5; text-decoration: none;">{{ student_email }}</a>
+            </span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 120px;">Joined At</span>
+            <span style="color: #1a1a2e; font-size: 14px;">{{ joined_at|date:"F d, Y \a\t H:i" }}</span>
+        </td>
+    </tr>
+</table>
+
+<div class="alert alert-info">
+    <strong>Note:</strong> This student can now view the classroom details and submit a project.
+</div>
+
+<p style="margin-top: 24px;">
+    <a href="{{ classroom_url }}" class="btn">View Classroom</a>
+    <a href="{{ members_url }}" class="btn btn-secondary">View All Members</a>
+</p>
+
+<p style="margin-top: 24px; color: #64748b; font-size: 14px;">
+    You will be notified when this student submits their project for grading.
+</p>
+{% endblock %}

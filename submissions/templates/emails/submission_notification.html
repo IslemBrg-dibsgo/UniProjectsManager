@@ -1,0 +1,72 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}New Project Submission{% endblock %}
+
+{% block content %}
+<h2>New Project Submission</h2>
+
+<p>Hello {{ teacher_name }},</p>
+
+<p>A student has submitted a new project in your classroom. Here are the details:</p>
+
+<div class="info-box">
+    <h3>{{ project_title }}</h3>
+    <p>Classroom: {{ classroom_title }}</p>
+</div>
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Submitted By</span>
+            <span style="color: #1a1a2e; font-size: 14px;">{{ student_name }}</span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Submitted At</span>
+            <span style="color: #1a1a2e; font-size: 14px;">{{ submitted_at|date:"F d, Y \a\t H:i" }}</span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Collaborators</span>
+            <span style="color: #1a1a2e; font-size: 14px;">
+                {% for collaborator in collaborators %}
+                    {{ collaborator }}{% if not forloop.last %}, {% endif %}
+                {% endfor %}
+            </span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Repository</span>
+            <span style="color: #1a1a2e; font-size: 14px;">
+                <a href="{{ repository_url }}" style="color: #4f46e5; text-decoration: none;">{{ repository_url|truncatechars:40 }}</a>
+            </span>
+        </td>
+    </tr>
+    {% if deployed_url %}
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Live Demo</span>
+            <span style="color: #1a1a2e; font-size: 14px;">
+                <a href="{{ deployed_url }}" style="color: #4f46e5; text-decoration: none;">{{ deployed_url|truncatechars:40 }}</a>
+            </span>
+        </td>
+    </tr>
+    {% endif %}
+</table>
+
+<div class="alert alert-info">
+    <strong>Action Required:</strong> Please review and grade this submission at your earliest convenience.
+</div>
+
+<p style="margin-top: 24px;">
+    <a href="{{ submission_url }}" class="btn">View Submission</a>
+    <a href="{{ classroom_url }}" class="btn btn-secondary">View Classroom</a>
+</p>
+
+<p style="margin-top: 24px; color: #64748b; font-size: 14px;">
+    You can grade this submission by clicking the button above and navigating to the grading form.
+</p>
+{% endblock %}

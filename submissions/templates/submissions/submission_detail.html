@@ -1,0 +1,261 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ submission.title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'classroom_list' %}">Classrooms</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'classroom_detail' submission.classroom.pk %}">{{ submission.classroom.title }}</a></li>
+        <li class="breadcrumb-item active">{{ submission.title }}</li>
+    </ol>
+</nav>
+
+<div class="row g-4">
+    <!-- Main Content -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h2 class="card-title mb-2">{{ submission.title }}</h2>
+                        <div class="d-flex gap-2 align-items-center">
+                            {% if submission.grade %}
+                            <span class="badge badge-graded">Graded</span>
+                            {% elif submission.status == 'SUBMITTED' %}
+                            <span class="badge badge-submitted">Submitted</span>
+                            {% else %}
+                            <span class="badge badge-draft">Draft</span>
+                            {% endif %}
+                            <span class="text-muted">|</span>
+                            <small class="text-muted">
+                                Created {{ submission.created_at|date:"F d, Y" }}
+                            </small>
+                        </div>
+                    </div>
+                    {% if can_edit %}
+                    <div class="dropdown">
+                        <button class="btn btn-outline-secondary btn-sm" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'submission_update' submission.pk %}">
+                                <i class="bi bi-pencil me-2"></i>Edit Submission
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'submission_delete' submission.pk %}">
+                                <i class="bi bi-trash me-2"></i>Delete Submission
+                            </a></li>
+                        </ul>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <hr>
+                
+                <h5>Project Description</h5>
+                <p class="mb-4">{{ submission.description|linebreaks }}</p>
+                
+                <h5>Links</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-github fs-4 me-2"></i>
+                                <strong>Repository</strong>
+                            </div>
+                            <a href="{{ submission.repository_url }}" target="_blank" class="text-break">
+                                {{ submission.repository_url }}
+                                <i class="bi bi-box-arrow-up-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% if submission.deployed_url %}
+                    <div class="col-md-6">
+                        <div class="border rounded p-3">
+                            <div class="d-flex align-items-center mb-2">
+                                <i class="bi bi-globe fs-4 me-2"></i>
+                                <strong>Live Demo</strong>
+                            </div>
+                            <a href="{{ submission.deployed_url }}" target="_blank" class="text-break">
+                                {{ submission.deployed_url }}
+                                <i class="bi bi-box-arrow-up-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                <h5>Collaborators</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for collaborator in submission.collaborators.all %}
+                    <span class="badge bg-light text-dark border py-2 px-3">
+                        <i class="bi bi-person-circle me-1"></i>
+                        {{ collaborator.get_full_name|default:collaborator.username }}
+                    </span>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Grade & Feedback (if graded) -->
+        {% if submission.grade %}
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-check-circle me-2"></i>Grade & Feedback
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row align-items-center mb-4">
+                    <div class="col-auto">
+                        <div class="grade-badge {% if submission.grade >= 16 %}grade-excellent{% elif submission.grade >= 12 %}grade-good{% elif submission.grade >= 10 %}grade-average{% else %}grade-poor{% endif %}" style="font-size: 2rem;">
+                            {{ submission.grade }}/20
+                        </div>
+                    </div>
+                    <div class="col">
+                        <p class="mb-0 text-muted">
+                            {% if submission.grade >= 16 %}
+                            Excellent work! Outstanding performance.
+                            {% elif submission.grade >= 14 %}
+                            Great job! Very good performance.
+                            {% elif submission.grade >= 12 %}
+                            Good work! Above average performance.
+                            {% elif submission.grade >= 10 %}
+                            Satisfactory. Meets minimum requirements.
+                            {% else %}
+                            Needs improvement. Please review the feedback.
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if submission.teacher_notes %}
+                <h6>Teacher's Feedback</h6>
+                <div class="bg-light rounded p-3">
+                    {{ submission.teacher_notes|linebreaks }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Submit Button (for draft) -->
+        {% if can_edit and submission.is_draft %}
+        <div class="card border-primary mt-4">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">Ready to Submit?</h5>
+                        <p class="text-muted mb-0">Once submitted, you won't be able to edit this project.</p>
+                    </div>
+                    <a href="{% url 'submission_submit' submission.pk %}" class="btn btn-primary btn-lg">
+                        <i class="bi bi-send me-1"></i> Submit Project
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <!-- Classroom Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-collection me-2"></i>Classroom
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>{{ submission.classroom.title }}</h6>
+                <p class="text-muted small mb-2">{{ submission.classroom.description|truncatewords:20 }}</p>
+                <p class="mb-0">
+                    <small class="text-muted">
+                        <i class="bi bi-person me-1"></i>
+                        {{ submission.classroom.teacher.get_full_name|default:submission.classroom.teacher.username }}
+                    </small>
+                </p>
+                <a href="{% url 'classroom_detail' submission.classroom.pk %}" class="btn btn-outline-primary btn-sm mt-3">
+                    View Classroom
+                </a>
+            </div>
+        </div>
+        
+        <!-- Submission Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle me-2"></i>Details
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Created by</span>
+                    <strong>{{ submission.created_by.get_full_name|default:submission.created_by.username }}</strong>
+                </div>
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Created</span>
+                    <span>{{ submission.created_at|date:"M d, Y" }}</span>
+                </div>
+                {% if submission.submitted_at %}
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Submitted</span>
+                    <span>{{ submission.submitted_at|date:"M d, Y" }}</span>
+                </div>
+                {% endif %}
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Collaborators</span>
+                    <span>{{ submission.collaborators.count }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Teacher Actions -->
+        {% if can_grade %}
+        <div class="card border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil-square me-2"></i>Teacher Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                {% if submission.grade %}
+                <p class="mb-2">Current Grade: <strong>{{ submission.grade }}/20</strong></p>
+                <a href="{% url 'submission_grade' submission.pk %}" class="btn btn-warning w-100">
+                    <i class="bi bi-pencil me-1"></i> Update Grade
+                </a>
+                {% else %}
+                <p class="mb-2">This submission is awaiting your grade.</p>
+                <a href="{% url 'submission_grade' submission.pk %}" class="btn btn-warning w-100">
+                    <i class="bi bi-check2-square me-1"></i> Grade Now
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Quick Actions (for collaborators) -->
+        {% if can_edit %}
+        <div class="card">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-lightning me-2"></i>Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{% url 'submission_update' submission.pk %}" class="btn btn-outline-primary">
+                        <i class="bi bi-pencil me-2"></i>Edit Submission
+                    </a>
+                    <a href="{% url 'submission_delete' submission.pk %}" class="btn btn-outline-danger">
+                        <i class="bi bi-trash me-2"></i>Delete Submission
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

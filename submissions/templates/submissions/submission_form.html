@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<!-- Breadcrumb -->
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{% url 'classroom_list' %}">Classrooms</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'classroom_detail' classroom.pk %}">{{ classroom.title }}</a></li>
+        <li class="breadcrumb-item active">{{ title }}</li>
+    </ol>
+</nav>
+
+<div class="row">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header bg-white">
+                <h4 class="mb-0">
+                    <i class="bi bi-{% if object %}pencil{% else %}plus-circle{% endif %} me-2"></i>
+                    {{ title }}
+                </h4>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-4">
+                        <label for="id_title" class="form-label">Project Title <span class="text-danger">*</span></label>
+                        {{ form.title }}
+                        {% if form.title.help_text %}
+                        <div class="form-text">{{ form.title.help_text }}</div>
+                        {% endif %}
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback d-block">{{ form.title.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="id_description" class="form-label">Project Description <span class="text-danger">*</span></label>
+                        {{ form.description }}
+                        {% if form.description.help_text %}
+                        <div class="form-text">{{ form.description.help_text }}</div>
+                        {% endif %}
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback d-block">{{ form.description.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="id_repository_url" class="form-label">Repository URL <span class="text-danger">*</span></label>
+                        {{ form.repository_url }}
+                        {% if form.repository_url.help_text %}
+                        <div class="form-text">{{ form.repository_url.help_text }}</div>
+                        {% endif %}
+                        {% if form.repository_url.errors %}
+                        <div class="invalid-feedback d-block">{{ form.repository_url.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="id_deployed_url" class="form-label">Deployed URL</label>
+                        {{ form.deployed_url }}
+                        {% if form.deployed_url.help_text %}
+                        <div class="form-text">{{ form.deployed_url.help_text }}</div>
+                        {% endif %}
+                        {% if form.deployed_url.errors %}
+                        <div class="invalid-feedback d-block">{{ form.deployed_url.errors.0 }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Collaborators</label>
+                        <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto;">
+                            {% for checkbox in form.collaborators %}
+                            <div class="form-check">
+                                {{ checkbox.tag }}
+                                <label class="form-check-label" for="{{ checkbox.id_for_label }}">
+                                    {{ checkbox.choice_label }}
+                                </label>
+                            </div>
+                            {% empty %}
+                            <p class="text-muted mb-0">No other students in this classroom yet.</p>
+                            {% endfor %}
+                        </div>
+                        {% if form.collaborators.help_text %}
+                        <div class="form-text">{{ form.collaborators.help_text }}</div>
+                        {% endif %}
+                        {% if form.collaborators.errors %}
+                        <div class="invalid-feedback d-block">{{ form.collaborators.errors.0 }}</div>
+                        {% endif %}
+                        <div class="form-text">
+                            <i class="bi bi-info-circle me-1"></i>
+                            You will be automatically added as a collaborator.
+                        </div>
+                    </div>
+                    
+                    {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {% for error in form.non_field_errors %}
+                        {{ error }}
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                    
+                    <hr>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'classroom_detail' classroom.pk %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left me-1"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i> {{ submit_text }}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="col-lg-4">
+        <div class="card bg-light border-0">
+            <div class="card-body">
+                <h6 class="card-title">
+                    <i class="bi bi-lightbulb me-2 text-warning"></i>Tips
+                </h6>
+                <ul class="small text-muted mb-0 ps-3">
+                    <li class="mb-2">Make sure your repository is public or accessible to your teacher</li>
+                    <li class="mb-2">Include a README file with setup instructions</li>
+                    <li class="mb-2">Add collaborators who worked on this project with you</li>
+                    <li class="mb-2">You can save as draft and submit later</li>
+                    <li>Once submitted, you cannot edit the submission</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="card mt-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0">
+                    <i class="bi bi-collection me-2"></i>Classroom
+                </h6>
+            </div>
+            <div class="card-body">
+                <h6>{{ classroom.title }}</h6>
+                <p class="text-muted small mb-0">{{ classroom.description|truncatewords:30 }}</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
