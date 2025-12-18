@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}University Project Submission Platform{% endblock %}</title>
+    <style>
+        /* Reset styles */
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f5f5f5;
+        }
+        
+        /* Container */
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+        }
+        
+        /* Header */
+        .email-header {
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            padding: 30px 40px;
+            text-align: center;
+        }
+        
+        .email-header h1 {
+            color: #ffffff;
+            margin: 0;
+            font-size: 24px;
+            font-weight: 600;
+        }
+        
+        .email-header .subtitle {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        /* Body */
+        .email-body {
+            padding: 40px;
+        }
+        
+        .greeting {
+            font-size: 18px;
+            color: #1f2937;
+            margin-bottom: 20px;
+        }
+        
+        .content {
+            color: #4b5563;
+            font-size: 15px;
+        }
+        
+        .content p {
+            margin: 0 0 15px 0;
+        }
+        
+        /* Info Box */
+        .info-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .info-box h3 {
+            color: #1f2937;
+            font-size: 16px;
+            margin: 0 0 15px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        
+        .info-row {
+            display: flex;
+            margin-bottom: 10px;
+        }
+        
+        .info-label {
+            color: #6b7280;
+            font-size: 14px;
+            width: 120px;
+            flex-shrink: 0;
+        }
+        
+        .info-value {
+            color: #1f2937;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .info-value a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        
+        .info-value a:hover {
+            text-decoration: underline;
+        }
+        
+        /* Grade Box */
+        .grade-box {
+            text-align: center;
+            padding: 30px;
+            margin: 20px 0;
+            border-radius: 12px;
+        }
+        
+        .grade-box.passing {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+        
+        .grade-box.failing {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+        
+        .grade-value {
+            font-size: 48px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+        }
+        
+        .grade-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        /* Button */
+        .button-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .button {
+            display: inline-block;
+            background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        
+        .button:hover {
+            opacity: 0.9;
+        }
+        
+        .button-secondary {
+            background: #f1f5f9;
+            color: #475569 !important;
+            margin-left: 10px;
+        }
+        
+        /* Notes */
+        .notes-box {
+            background-color: #fef3c7;
+            border: 1px solid #fcd34d;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .notes-box h4 {
+            color: #92400e;
+            font-size: 14px;
+            margin: 0 0 10px 0;
+        }
+        
+        .notes-box p {
+            color: #78350f;
+            font-size: 14px;
+            margin: 0;
+            white-space: pre-wrap;
+        }
+        
+        /* Footer */
+        .email-footer {
+            background-color: #f8fafc;
+            padding: 30px 40px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+        }
+        
+        .email-footer p {
+            color: #6b7280;
+            font-size: 13px;
+            margin: 0 0 10px 0;
+        }
+        
+        .email-footer a {
+            color: #3b82f6;
+            text-decoration: none;
+        }
+        
+        .footer-links {
+            margin-top: 15px;
+        }
+        
+        .footer-links a {
+            color: #6b7280;
+            font-size: 12px;
+            margin: 0 10px;
+        }
+        
+        /* Responsive */
+        @media only screen and (max-width: 600px) {
+            .email-body {
+                padding: 25px;
+            }
+            
+            .email-header {
+                padding: 25px;
+            }
+            
+            .info-row {
+                flex-direction: column;
+            }
+            
+            .info-label {
+                width: 100%;
+                margin-bottom: 3px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <!-- Header -->
+        <div class="email-header">
+            <h1>{% block header_title %}University Project Submission{% endblock %}</h1>
+            <div class="subtitle">{% block header_subtitle %}Project Submission Platform{% endblock %}</div>
+        </div>
+        
+        <!-- Body -->
+        <div class="email-body">
+            {% block content %}{% endblock %}
+        </div>
+        
+        <!-- Footer -->
+        <div class="email-footer">
+            <p>This email was sent from the University Project Submission Platform.</p>
+            <p>
+                <a href="{{ site_url }}">Visit Platform</a>
+            </p>
+            <div class="footer-links">
+                <a href="{{ site_url }}">Dashboard</a>
+                <a href="{{ site_url }}/classrooms/">My Classrooms</a>
+                <a href="{{ site_url }}/submissions/">My Submissions</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
