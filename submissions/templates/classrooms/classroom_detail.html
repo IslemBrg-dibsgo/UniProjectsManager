@@ -238,9 +238,13 @@
                     <span class="text-muted">Submitted</span>
                     <strong>{{ classroom.get_submitted_count }}</strong>
                 </div>
-                <div class="d-flex justify-content-between">
+                <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Graded</span>
                     <strong>{{ classroom.get_graded_count }}</strong>
+                </div>
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Members without a project</span>
+                    <strong>{{ slacking_members.count }}</strong>
                 </div>
             </div>
         </div>

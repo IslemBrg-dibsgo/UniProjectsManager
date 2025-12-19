@@ -15,7 +15,7 @@
 <div class="page-header d-flex justify-content-between align-items-center">
     <div>
         <h1 class="h3 mb-1">Classroom Members</h1>
-        <p class="text-muted mb-0">{{ classroom.title }} - {{ memberships.count }} student(s) enrolled</p>
+        <p class="text-muted mb-0">{{ classroom.title }} - {{ total_memberships }} student(s) enrolled</p>
     </div>
     {% if is_owner %}
     <div class="text-end">
@@ -58,20 +58,18 @@
                     <td>{{ membership.student.email }}</td>
                     <td>{{ membership.joined_at|date:"M d, Y" }}</td>
                     <td>
-                        {% with submission=membership.student.created_submissions.all|first %}
-                        {% if submission and submission.classroom == classroom %}
-                            {% if submission.grade %}
-                            <span class="badge badge-graded">{{ submission.grade }}/20</span>
-                            {% elif submission.status == 'SUBMITTED' %}
+                        {% if membership.submission %}
+                          {% if membership.submission.grade %}
+                            <span class="badge badge-graded">{{ membership.submission.grade }}/20</span>
+                          {% elif membership.submission.status == 'SUBMITTED' %}
                             <span class="badge badge-submitted">Submitted</span>
-                            {% else %}
+                          {% else %}
                             <span class="badge badge-draft">Draft</span>
-                            {% endif %}
+                          {% endif %}
                         {% else %}
-                        <span class="text-muted">--</span>
+                          <span class="text-muted">--</span>
                         {% endif %}
-                        {% endwith %}
-                    </td>
+                      </td>                      
                     {% if is_owner %}
                     <td>
                         <a href="{% url 'classroom_remove_member' classroom.pk membership.student.pk %}" 

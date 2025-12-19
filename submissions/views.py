@@ -13,7 +13,9 @@ from django.contrib import messages
 from django.shortcuts import redirect, get_object_or_404
 from django.urls import reverse_lazy, reverse
 from django.http import HttpResponseForbidden, Http404
+from django.db import models
 from django.db.models import Count, Avg, Q
+from django.db.models import Prefetch
 
 from .models import User, Classroom, ClassroomMembership, ProjectSubmission
 from .forms import (
@@ -23,11 +25,14 @@ from .forms import (
     ProjectSubmitForm, GradeSubmissionForm,
     SubmissionFilterForm, ClassroomFilterForm
 )
-
+from pprint import pprint
+import json
+from django.core.serializers.json import DjangoJSONEncoder
 
 # =============================================================================
 # MIXINS FOR PERMISSION CONTROL
 # =============================================================================
+
 
 class TeacherRequiredMixin(UserPassesTestMixin):
     """Mixin that requires the user to be a teacher"""
@@ -57,8 +62,18 @@ class ClassroomOwnerMixin(UserPassesTestMixin):
     """Mixin that requires the user to be the owner of the classroom"""
 
     def test_func(self):
-        classroom = self.get_object()
-        return self.request.user == classroom.teacher
+        obj = self.get_object()
+        # If the object is not a Classroom instance, try to get the associated classroom
+        if not isinstance(obj, Classroom):
+            # Handles objects with a 'classroom' ForeignKey (such as ClassroomMembership, ProjectSubmission, etc.)
+            classroom = getattr(obj, 'classroom', None)
+            if classroom is not None:
+                return self.request.user == classroom.teacher
+            else:
+                # Fallback: deny permission if classroom is not found
+                return False
+        else:
+            return self.request.user == obj.teacher
 
     def handle_no_permission(self):
         messages.error(
@@ -291,7 +306,23 @@ class ClassroomDetailView(LoginRequiredMixin, ClassroomMemberMixin, DetailView):
             classroom=classroom
         ).select_related('student')[:10]
         context['member_count'] = classroom.get_student_count()
+        
+        # Get students who have NOT created any project (as owner or collaborator) for this classroom
+        classroom_submissions = ProjectSubmission.objects.filter(
+            classroom=classroom)
+        collaborated_user_ids = classroom_submissions.values_list(
+            'collaborators__id', flat=True)
+        creators_ids = classroom_submissions.values_list(
+            'created_by__id', flat=True)
+        involved_user_ids = set(
+            list(collaborated_user_ids) + list(creators_ids))
 
+        # filter out students who are in involved_user_ids
+        context['slacking_members'] = ClassroomMembership.objects.filter(
+            classroom=classroom
+        ).exclude(
+            student_id__in=involved_user_ids
+        ).select_related('student')
         if user.is_teacher and classroom.teacher == user:
             # Teacher sees all submissions
             context['submissions'] = ProjectSubmission.objects.for_classroom(
@@ -447,7 +478,8 @@ class SubmissionDetailView(LoginRequiredMixin, SubmissionAccessMixin, DetailView
         context = super().get_context_data(**kwargs)
         submission = self.get_object()
         if submission.project_file:
-            context['project_file_name'] = submission.project_file.name.split('/')[-1]
+            context['project_file_name'] = submission.project_file.name.split(
+                '/')[-1]
         user = self.request.user
 
         context['can_edit'] = submission.can_user_edit(user)
@@ -516,7 +548,8 @@ class SubmissionUpdateView(LoginRequiredMixin, SubmissionEditMixin, SuccessMessa
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['project_file_name'] = self.object.project_file.name.split('/')[-1]
+        context['project_file_name'] = self.object.project_file.name.split(
+            '/')[-1]
         context['classroom'] = self.object.classroom
         context['title'] = 'Edit Project Submission'
         context['submit_text'] = 'Save Changes'
@@ -684,7 +717,8 @@ class GradeSubmissionView(LoginRequiredMixin, TeacherRequiredMixin, SuccessMessa
         context_submission = self.get_object()
         context['submission'] = context_submission
         if context_submission.project_file:
-            context['project_file_name'] = context_submission.project_file.name.split('/')[-1]
+            context['project_file_name'] = context_submission.project_file.name.split(
+                '/')[-1]
         return context
 
     def get_success_url(self):
@@ -715,14 +749,34 @@ class ClassroomMemberListView(LoginRequiredMixin, ClassroomMemberMixin, ListView
         return self.classroom
 
     def get_queryset(self):
-        return ClassroomMembership.objects.filter(
+        qs = ClassroomMembership.objects.filter(
             classroom=self.classroom
-        ).select_related('student').order_by('student__last_name', 'student__first_name')
+        ).select_related('student').prefetch_related(
+            Prefetch(
+                'student__created_submissions',
+                queryset=ProjectSubmission.objects.filter(classroom=self.classroom)
+            ),
+            Prefetch(
+                'student__project_collaborations',
+                queryset=ProjectSubmission.objects.filter(classroom=self.classroom)
+            )
+        ).order_by('student__last_name', 'student__first_name')
+
+        # Compute the first submission for each membership
+        for membership in qs:
+            membership.submission = (
+                membership.student.created_submissions.first()
+                or membership.student.project_collaborations.first()
+            )
+
+        return qs
+
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['classroom'] = self.classroom
         context['is_owner'] = self.request.user == self.classroom.teacher
+        context['total_memberships'] = context['paginator'].count
         return context
 
 

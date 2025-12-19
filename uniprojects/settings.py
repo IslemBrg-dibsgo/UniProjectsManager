@@ -160,7 +160,7 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 # =============================================================================
 
 # Enable/disable email notifications globally
-ENABLE_EMAIL_NOTIFICATIONS = True
+ENABLE_EMAIL_NOTIFICATIONS = False
 
 # Site information for email templates
 SITE_NAME = 'Draft2Done'
@@ -204,7 +204,12 @@ LOGGING = {
     'loggers': {
         'submissions': {
             'handlers': ['console'],
-            'level': 'INFO',
+            'level': 'DEBUG',
+            'propagate': True,
+        },
+        'classrooms': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
             'propagate': True,
         },
     },
