@@ -49,17 +49,18 @@ class CustomUserCreationForm(UserCreationForm):
         help_text='Check this box if you are a teacher. Leave unchecked for student registration.',
         widget=forms.CheckboxInput(attrs={'class': 'form-check-input'})
     )
-    
+
     class Meta:
         model = User
-        fields = ['username', 'email', 'first_name', 'last_name', 'password1', 'password2', 'is_teacher']
+        fields = ['username', 'email', 'first_name',
+                  'last_name', 'password1', 'password2', 'is_teacher']
         widgets = {
             'username': forms.TextInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'Choose a username'
             }),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Add Bootstrap classes to password fields
@@ -71,7 +72,7 @@ class CustomUserCreationForm(UserCreationForm):
             'class': 'form-control',
             'placeholder': 'Confirm password'
         })
-    
+
     def clean_email(self):
         """Ensure email is unique"""
         email = self.cleaned_data.get('email')
@@ -82,7 +83,7 @@ class CustomUserCreationForm(UserCreationForm):
 
 class CustomAuthenticationForm(AuthenticationForm):
     """Custom login form with Bootstrap styling"""
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['username'].widget.attrs.update({
@@ -104,7 +105,7 @@ class ClassroomCreateForm(forms.ModelForm):
     Form for teachers to create new classrooms.
     Teacher is set automatically in the view.
     """
-    
+
     class Meta:
         model = Classroom
         fields = ['title', 'description', 'requirements_file']
@@ -135,7 +136,7 @@ class ClassroomUpdateForm(forms.ModelForm):
     Form for teachers to update classroom details.
     Join code cannot be edited directly (use regenerate action instead).
     """
-    
+
     class Meta:
         model = Classroom
         fields = ['title', 'description', 'requirements_file']
@@ -161,35 +162,38 @@ class JoinClassroomForm(forms.Form):
         }),
         help_text='Enter the 8-character code provided by your teacher'
     )
-    
+
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.user = user
         self.classroom = None
-    
+
     def clean_join_code(self):
         """Validate the join code and check membership"""
         code = self.cleaned_data.get('join_code', '').upper().strip()
-        
+
         # Check if classroom exists
         try:
             self.classroom = Classroom.objects.get(join_code=code)
         except Classroom.DoesNotExist:
-            raise ValidationError('Invalid join code. Please check and try again.')
-        
+            raise ValidationError(
+                'Invalid join code. Please check and try again.')
+
         # Check if user is already a member
         if self.user and ClassroomMembership.objects.filter(
             classroom=self.classroom,
             student=self.user
         ).exists():
-            raise ValidationError('You are already a member of this classroom.')
-        
+            raise ValidationError(
+                'You are already a member of this classroom.')
+
         # Check if user is the teacher of this classroom
         if self.user and self.classroom.teacher == self.user:
-            raise ValidationError('You cannot join your own classroom as a student.')
-        
+            raise ValidationError(
+                'You cannot join your own classroom as a student.')
+
         return code
-    
+
     def save(self):
         """Create the membership after validation"""
         if self.classroom and self.user:
@@ -209,11 +213,13 @@ class ProjectSubmissionCreateForm(forms.ModelForm):
     """
     Form for students to create a new project submission.
     Collaborators are limited to students in the same classroom.
+    Supports both GitHub URL and file upload submissions.
     """
-    
+
     class Meta:
         model = ProjectSubmission
-        fields = ['title', 'description', 'repository_url', 'deployed_url', 'collaborators']
+        fields = ['title', 'description', 'submission_type',
+                  'repository_url', 'deployed_url', 'project_file', 'collaborators']
         widgets = {
             'title': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -224,6 +230,10 @@ class ProjectSubmissionCreateForm(forms.ModelForm):
                 'rows': 6,
                 'placeholder': 'Describe your project, technologies used, features implemented...'
             }),
+            'submission_type': forms.RadioSelect(attrs={
+                'class': 'form-check-input',
+                'onclick': 'toggleSubmissionType()'
+            }),
             'repository_url': forms.URLInput(attrs={
                 'class': 'form-control',
                 'placeholder': 'https://github.com/username/repository'
@@ -232,46 +242,104 @@ class ProjectSubmissionCreateForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'https://your-project.herokuapp.com (optional)'
             }),
+            'project_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.zip,.rar,.7z,.tar.gz,.pdf,.doc,.docx'
+            }),
             'collaborators': forms.CheckboxSelectMultiple(attrs={
                 'class': 'form-check-input'
             }),
         }
-    
+
     def __init__(self, *args, classroom=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.classroom = classroom
         self.user = user
-        
+
         if classroom:
             # Limit collaborators to students in this classroom
             # Exclude the current user as they'll be added automatically
             student_ids = ClassroomMembership.objects.filter(
                 classroom=classroom
             ).values_list('student_id', flat=True)
-            
+
             self.fields['collaborators'].queryset = User.objects.filter(
                 id__in=student_ids,
                 is_teacher=False
             )
-            
+
             # Make collaborators optional (creator is added automatically)
             self.fields['collaborators'].required = False
-    
+
+        # Make URL and file fields optional initially (validated in clean method)
+        self.fields['repository_url'].required = False
+        self.fields['project_file'].required = False
+
     def clean_repository_url(self):
-        """Validate repository URL format"""
+        """Validate repository URL format if URL submission type is selected"""
         url = self.cleaned_data.get('repository_url', '')
-        valid_hosts = ['github.com', 'gitlab.com', 'bitbucket.org']
-        
-        if not any(host in url.lower() for host in valid_hosts):
-            raise ValidationError(
-                'Please provide a valid GitHub, GitLab, or Bitbucket repository URL.'
-            )
+        submission_type = self.cleaned_data.get('submission_type')
+
+        # Only validate if URL type is selected and URL is provided
+        if submission_type == ProjectSubmission.SubmissionType.URL and url:
+            valid_hosts = ['github.com', 'gitlab.com', 'bitbucket.org']
+            if not any(host in url.lower() for host in valid_hosts):
+                raise ValidationError(
+                    'Please provide a valid GitHub, GitLab, or Bitbucket repository URL.'
+                )
         return url
-    
+
+    def clean_project_file(self):
+        """Validate project file size and type"""
+        file = self.cleaned_data.get('project_file')
+
+        if file:
+            # Check file size (max 10MB)
+            if file.size > 10 * 1024 * 1024:
+                raise ValidationError('File size must not exceed 10MB.')
+
+            # Check file extension
+            valid_extensions = ['.zip', '.rar', '.7z',
+                                '.tar', '.gz', '.pdf', '.doc', '.docx']
+            file_name = file.name.lower()
+            if not any(file_name.endswith(ext) for ext in valid_extensions):
+                raise ValidationError(
+                    f'Please upload a valid file ({", ".join(valid_extensions)}).')
+
+        return file
+
     def clean(self):
         """Additional validation for the submission"""
         cleaned_data = super().clean()
-        
+
+        submission_type = cleaned_data.get('submission_type')
+        repository_url = cleaned_data.get('repository_url')
+        project_file = cleaned_data.get('project_file')
+
+        # Validate based on submission type
+        if submission_type == ProjectSubmission.SubmissionType.URL:
+            if not repository_url:
+                raise ValidationError({
+                    'repository_url': 'Repository URL is required for URL-only submissions.'
+                })
+        elif submission_type == ProjectSubmission.SubmissionType.FILE:
+            if not project_file:
+                # Check if it's an update and file already exists
+                if not (self.instance and self.instance.pk and self.instance.project_file):
+                    raise ValidationError({
+                        'project_file': 'Project file is required for file-only submissions.'
+                    })
+        elif submission_type == ProjectSubmission.SubmissionType.BOTH:
+            errors = {}
+            if not repository_url:
+                errors['repository_url'] = 'Repository URL is required when using both URL and file.'
+            if not project_file:
+                # Check if it's an update and file already exists
+                if not (self.instance and self.instance.pk and self.instance.project_file):
+                    errors['project_file'] = 'Project file is required when using both URL and file.'
+            if errors:
+                raise ValidationError(errors)
+
         # Check if user already has a submission in this classroom
         if self.classroom and self.user:
             existing = ProjectSubmission.objects.filter(
@@ -280,30 +348,30 @@ class ProjectSubmissionCreateForm(forms.ModelForm):
             )
             if self.instance.pk:
                 existing = existing.exclude(pk=self.instance.pk)
-            
+
             if existing.exists():
                 raise ValidationError(
                     'You already have a project submission in this classroom.'
                 )
-        
+
         return cleaned_data
-    
+
     def save(self, commit=True):
         """Save the submission with classroom and creator"""
         instance = super().save(commit=False)
-        
+
         if self.classroom:
             instance.classroom = self.classroom
         if self.user:
             instance.created_by = self.user
-        
+
         if commit:
             instance.save()
             # Add the creator as a collaborator
             self.save_m2m()
             if self.user and not instance.collaborators.filter(pk=self.user.pk).exists():
                 instance.collaborators.add(self.user)
-        
+
         return instance
 
 
@@ -311,49 +379,124 @@ class ProjectSubmissionUpdateForm(forms.ModelForm):
     """
     Form for students to update their draft submission.
     Only available while status is DRAFT.
+    Supports both GitHub URL and file upload submissions.
     """
-    
+
     class Meta:
         model = ProjectSubmission
-        fields = ['title', 'description', 'repository_url', 'deployed_url', 'collaborators']
+        fields = ['title', 'description', 'submission_type',
+                  'repository_url', 'deployed_url', 'project_file', 'collaborators']
         widgets = {
             'title': forms.TextInput(attrs={'class': 'form-control'}),
             'description': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
+            'submission_type': forms.RadioSelect(attrs={
+                'class': 'form-check-input',
+                'onclick': 'toggleSubmissionType()'
+            }),
             'repository_url': forms.URLInput(attrs={'class': 'form-control'}),
             'deployed_url': forms.URLInput(attrs={'class': 'form-control'}),
+            'project_file': forms.FileInput(attrs={
+                'class': 'form-control',
+                'accept': '.zip,.rar,.7z,.tar.gz,.pdf,.doc,.docx'
+            }),
             'collaborators': forms.CheckboxSelectMultiple(attrs={
                 'class': 'form-check-input'
             }),
         }
-    
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         if self.instance and self.instance.pk:
             classroom = self.instance.classroom
-            
+
             # Limit collaborators to students in this classroom
             student_ids = ClassroomMembership.objects.filter(
                 classroom=classroom
             ).values_list('student_id', flat=True)
-            
+
             self.fields['collaborators'].queryset = User.objects.filter(
                 id__in=student_ids,
                 is_teacher=False
             )
-            
+
             # If submission is not a draft, make all fields read-only
             if not self.instance.is_draft:
                 for field in self.fields.values():
                     field.disabled = True
-    
+
+        # Make URL and file fields optional initially (validated in clean method)
+        self.fields['repository_url'].required = False
+        self.fields['project_file'].required = False
+
+    def clean_repository_url(self):
+        """Validate repository URL format if URL submission type is selected"""
+        url = self.cleaned_data.get('repository_url', '')
+        submission_type = self.cleaned_data.get('submission_type')
+
+        # Only validate if URL type is selected and URL is provided
+        if submission_type == ProjectSubmission.SubmissionType.URL and url:
+            valid_hosts = ['github.com', 'gitlab.com', 'bitbucket.org']
+            if not any(host in url.lower() for host in valid_hosts):
+                raise ValidationError(
+                    'Please provide a valid GitHub, GitLab, or Bitbucket repository URL.'
+                )
+        return url
+
+    def clean_project_file(self):
+        """Validate project file size and type"""
+        file = self.cleaned_data.get('project_file')
+
+        if file:
+            # Check file size (max 10MB)
+            if file.size > 10 * 1024 * 1024:
+                raise ValidationError('File size must not exceed 10MB.')
+
+            # Check file extension
+            valid_extensions = ['.zip', '.rar', '.7z', '.tar', '.gz', '.pdf', '.doc', '.docx']
+            file_name = file.name.lower()
+            if not any(file_name.endswith(ext) for ext in valid_extensions):
+                raise ValidationError(
+                    f'Please upload a valid file ({", ".join(valid_extensions)}).'
+                )
+
+        return file
+
     def clean(self):
-        """Ensure submission is still editable"""
+        """Ensure submission is still editable and validate based on type"""
         if self.instance and not self.instance.is_draft:
             raise ValidationError(
                 'This submission has already been submitted and cannot be edited.'
             )
-        return super().clean()
+
+        cleaned_data = super().clean()
+
+        submission_type = cleaned_data.get('submission_type')
+        repository_url = cleaned_data.get('repository_url')
+        project_file = cleaned_data.get('project_file')
+
+        # Validate based on submission type
+        if submission_type == ProjectSubmission.SubmissionType.URL:
+            if not repository_url:
+                raise ValidationError({
+                    'repository_url': 'Repository URL is required for URL-only submissions.'
+                })
+        elif submission_type == ProjectSubmission.SubmissionType.FILE:
+            # Check if file is provided or already exists
+            if not project_file and not (self.instance and self.instance.project_file):
+                raise ValidationError({
+                    'project_file': 'Project file is required for file-only submissions.'
+                })
+        elif submission_type == ProjectSubmission.SubmissionType.BOTH:
+            errors = {}
+            if not repository_url:
+                errors['repository_url'] = 'Repository URL is required when using both URL and file.'
+            if not project_file and not (self.instance and self.instance.project_file):
+                errors['project_file'] = 'Project file is required when using both URL and file.'
+            if errors:
+                raise ValidationError(errors)
+
+        return cleaned_data
 
 
 class ProjectSubmitForm(forms.Form):
@@ -378,7 +521,7 @@ class GradeSubmissionForm(forms.ModelForm):
     Form for teachers to grade a submission.
     Only available for submitted projects.
     """
-    
+
     class Meta:
         model = ProjectSubmission
         fields = ['grade', 'teacher_notes']
@@ -399,14 +542,14 @@ class GradeSubmissionForm(forms.ModelForm):
             'grade': 'Enter a grade between 1 and 20',
             'teacher_notes': 'Feedback will be visible to all collaborators',
         }
-    
+
     def clean_grade(self):
         """Validate grade is within range"""
         grade = self.cleaned_data.get('grade')
         if grade is not None and (grade < 1 or grade > 20):
             raise ValidationError('Grade must be between 1 and 20.')
         return grade
-    
+
     def clean(self):
         """Ensure submission is submitted before grading"""
         if self.instance and not self.instance.is_submitted:
@@ -472,33 +615,38 @@ class SubmissionFilterForm(forms.Form):
             'placeholder': 'Search by student name...'
         })
     )
-    
+
     def __init__(self, *args, user=None, **kwargs):
         super().__init__(*args, **kwargs)
-        
+
         if user:
             if user.is_teacher:
                 # Teachers see their own classrooms
-                self.fields['classroom'].queryset = Classroom.objects.for_teacher(user)
-                self.fields['status'].choices = [choice for choice in self.fields['status'].choices if choice[0] != 'DRAFT']
+                self.fields['classroom'].queryset = Classroom.objects.for_teacher(
+                    user)
+                self.fields['status'].choices = [
+                    choice for choice in self.fields['status'].choices if choice[0] != 'DRAFT']
             else:
                 # Students see classrooms they've joined
-                self.fields['classroom'].queryset = Classroom.objects.for_student(user)
-    
+                self.fields['classroom'].queryset = Classroom.objects.for_student(
+                    user)
+
     def filter_queryset(self, queryset):
         """Apply filters to the queryset"""
         if not self.is_valid():
             return queryset
-        
+
         data = self.cleaned_data
-        
+
         # Filter by status
         status = data.get('status')
         if status == 'GRADED':
             queryset = queryset.exclude(grade__isnull=True)
+        elif status == 'SUBMITTED':
+            queryset = queryset.filter(status=ProjectSubmission.Status.SUBMITTED, grade__isnull=True)
         elif status:
             queryset = queryset.filter(status=status)
-        
+
         # Filter by grade range
         grade_min = data.get('grade_min')
         grade_max = data.get('grade_max')
@@ -506,12 +654,12 @@ class SubmissionFilterForm(forms.Form):
             queryset = queryset.filter(grade__gte=grade_min)
         if grade_max is not None:
             queryset = queryset.filter(grade__lte=grade_max)
-        
+
         # Filter by classroom
         classroom = data.get('classroom')
         if classroom:
             queryset = queryset.filter(classroom=classroom)
-        
+
         # Filter by student name
         student = data.get('student')
         if student:
@@ -520,7 +668,7 @@ class SubmissionFilterForm(forms.Form):
                 Q(collaborators__first_name__icontains=student) |
                 Q(collaborators__last_name__icontains=student)
             ).distinct()
-        
+
         return queryset
 
 
@@ -533,12 +681,12 @@ class ClassroomFilterForm(forms.Form):
             'placeholder': 'Search classrooms...'
         })
     )
-    
+
     def filter_queryset(self, queryset):
         """Apply search filter to queryset"""
         if not self.is_valid():
             return queryset
-        
+
         search = self.cleaned_data.get('search')
         if search:
             queryset = queryset.filter(
@@ -547,5 +695,5 @@ class ClassroomFilterForm(forms.Form):
                 Q(teacher__first_name__icontains=search) |
                 Q(teacher__last_name__icontains=search)
             )
-        
+
         return queryset

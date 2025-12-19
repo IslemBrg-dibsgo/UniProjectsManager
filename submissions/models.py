@@ -10,11 +10,21 @@ from django.urls import reverse
 from django.utils import timezone
 import secrets
 import string
-
+from datetime import datetime
 
 def generate_join_code():
     """Generate a unique 8-character alphanumeric join code for classrooms"""
     return ''.join(secrets.choice(string.ascii_uppercase + string.digits) for _ in range(8))
+
+
+def project_submission_upload_path(instance, filename):
+    """
+    Generate upload path for project submissions based on classroom ID.
+    Files will be saved to: classroom_requirements/{classroom_id}/{filename}
+    """
+    
+    now = datetime.now().strftime('%Y-%m-%d_%H-%M-%S')
+    return f'classroom_requirements/{instance.classroom.id}/{now}_{filename}'
 
 
 class User(AbstractUser):
@@ -23,22 +33,23 @@ class User(AbstractUser):
     is_teacher determines elevated permissions.
     Default users are students.
     """
-    is_teacher = models.BooleanField(default=False, help_text="Designates whether this user is a teacher.")
-    
+    is_teacher = models.BooleanField(
+        default=False, help_text="Designates whether this user is a teacher.")
+
     class Meta:
         db_table = 'auth_user'
-    
+
     def __str__(self):
         return f"{self.get_full_name() or self.username} ({'Teacher' if self.is_teacher else 'Student'})"
 
 
 class ClassroomManager(models.Manager):
     """Custom manager for Classroom with common querysets"""
-    
+
     def for_teacher(self, teacher):
         """Get all classrooms owned by a teacher"""
         return self.filter(teacher=teacher)
-    
+
     def for_student(self, student):
         """Get all classrooms a student has joined"""
         return self.filter(memberships__student=student)
@@ -50,7 +61,8 @@ class Classroom(models.Model):
     Each classroom represents exactly one project assignment.
     """
     title = models.CharField(max_length=200)
-    description = models.TextField(help_text="Detailed description of the project requirements")
+    description = models.TextField(
+        help_text="Detailed description of the project requirements")
     requirements_file = models.FileField(
         upload_to='classroom_requirements/',
         blank=True,
@@ -72,40 +84,40 @@ class Classroom(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     objects = ClassroomManager()
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Classroom'
         verbose_name_plural = 'Classrooms'
-    
+
     def __str__(self):
         return f"{self.title} - {self.teacher.get_full_name() or self.teacher.username}"
-    
+
     def get_absolute_url(self):
         return reverse('classroom_detail', kwargs={'pk': self.pk})
-    
+
     def get_student_count(self):
         """Returns the number of students enrolled in this classroom"""
         return self.memberships.count()
-    
+
     def get_submission_count(self):
         """Returns the number of project submissions in this classroom"""
         return self.submissions.count()
-    
+
     def get_submitted_count(self):
         """Returns the number of submitted (non-draft) projects"""
         return self.submissions.filter(status=ProjectSubmission.Status.SUBMITTED).count()
-    
+
     def get_graded_count(self):
         """Returns the number of graded projects"""
         return self.submissions.exclude(grade__isnull=True).count()
-    
+
     def is_student_member(self, user):
         """Check if a user is a member of this classroom"""
         return self.memberships.filter(student=user).exists()
-    
+
     def regenerate_join_code(self):
         """Generate a new join code for this classroom"""
         self.join_code = generate_join_code()
@@ -130,34 +142,34 @@ class ClassroomMembership(models.Model):
         limit_choices_to={'is_teacher': False}
     )
     joined_at = models.DateTimeField(auto_now_add=True)
-    
+
     class Meta:
         unique_together = ['classroom', 'student']
         ordering = ['-joined_at']
         verbose_name = 'Classroom Membership'
         verbose_name_plural = 'Classroom Memberships'
-    
+
     def __str__(self):
         return f"{self.student.username} in {self.classroom.title}"
-    
+
     def get_absolute_url(self):
         return self.classroom.get_absolute_url()
 
 
 class ProjectSubmissionManager(models.Manager):
     """Custom manager for ProjectSubmission with permission-aware querysets"""
-    
+
     def for_student(self, student):
         """
         Get all submissions where the student is a collaborator.
         Students can only see their own projects.
         """
         return self.filter(collaborators=student)
-    
+
     def for_teacher(self, teacher):
         """Get all submissions in classrooms owned by the teacher where their status is SUBMITTED"""
         return self.filter(classroom__teacher=teacher, status=ProjectSubmission.Status.SUBMITTED)
-    
+
     def for_classroom(self, classroom, teacher=None):
         """
         Get all submissions in a specific classroom.
@@ -168,19 +180,19 @@ class ProjectSubmissionManager(models.Manager):
             # Only show submitted projects to teachers
             qs = qs.filter(status=ProjectSubmission.Status.SUBMITTED)
         return qs
-    
+
     def submitted(self):
         """Get only submitted (non-draft) projects"""
         return self.filter(status=ProjectSubmission.Status.SUBMITTED)
-    
+
     def drafts(self):
         """Get only draft projects"""
         return self.filter(status=ProjectSubmission.Status.DRAFT)
-    
+
     def graded(self):
         """Get only graded projects"""
         return self.exclude(grade__isnull=True)
-    
+
     def ungraded(self):
         """Get submitted but ungraded projects"""
         return self.filter(
@@ -195,20 +207,38 @@ class ProjectSubmission(models.Model):
     Only one submission per student per classroom.
     Editable only while status is DRAFT.
     """
-    
+
     class Status(models.TextChoices):
         DRAFT = 'DRAFT', 'Draft'
         SUBMITTED = 'SUBMITTED', 'Submitted'
-    
+
+    class SubmissionType(models.TextChoices):
+        URL = 'URL', 'Repository URL Only'
+        FILE = 'FILE', 'File Upload Only'
+        BOTH = 'BOTH', 'Both URL and File'
+
     classroom = models.ForeignKey(
         Classroom,
         on_delete=models.CASCADE,
         related_name='submissions'
     )
     title = models.CharField(max_length=200, help_text="Title of your project")
-    description = models.TextField(help_text="Describe your project, its features, and implementation details")
+    description = models.TextField(
+        help_text="Describe your project, its features, and implementation details")
+
+    # Submission type (URL, File, or Both)
+    submission_type = models.CharField(
+        max_length=10,
+        choices=SubmissionType.choices,
+        default=SubmissionType.URL,
+        help_text="Choose how to submit your project"
+    )
+
+    # Repository URL (optional based on submission type)
     repository_url = models.URLField(
-        help_text="GitHub or GitLab repository URL (required)",
+        blank=True,
+        null=True,
+        help_text="GitHub or GitLab repository URL",
         verbose_name="Repository URL"
     )
     deployed_url = models.URLField(
@@ -216,6 +246,14 @@ class ProjectSubmission(models.Model):
         null=True,
         help_text="URL where your project is deployed (optional)",
         verbose_name="Deployed URL"
+    )
+
+    # Project file upload (optional based on submission type)
+    project_file = models.FileField(
+        upload_to=project_submission_upload_path,
+        blank=True,
+        null=True,
+        help_text="Upload your project as a ZIP file (max 10MB)"
     )
     collaborators = models.ManyToManyField(
         User,
@@ -245,9 +283,9 @@ class ProjectSubmission(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     submitted_at = models.DateTimeField(null=True, blank=True)
-    
+
     objects = ProjectSubmissionManager()
-    
+
     class Meta:
         ordering = ['-created_at']
         verbose_name = 'Project Submission'
@@ -259,33 +297,59 @@ class ProjectSubmission(models.Model):
                 name='unique_submission_per_student_per_classroom'
             )
         ]
-    
+
     def __str__(self):
         return f"{self.title} - {self.classroom.title}"
-    
+
     def get_absolute_url(self):
         return reverse('submission_detail', kwargs={'pk': self.pk})
-    
+
     @property
     def is_draft(self):
         """Check if submission is still in draft status"""
         return self.status == self.Status.DRAFT
-    
+
     @property
     def is_submitted(self):
         """Check if submission has been submitted"""
         return self.status == self.Status.SUBMITTED
-    
+
     @property
     def is_graded(self):
         """Check if submission has been graded"""
         return self.grade is not None
-    
+
     @property
     def is_editable(self):
         """Submissions are only editable while in DRAFT status"""
         return self.is_draft
-    
+
+    @property
+    def is_url_submission(self):
+        """Check if this is a URL-based submission (URL only or both)"""
+        return self.submission_type in [self.SubmissionType.URL, self.SubmissionType.BOTH]
+
+    @property
+    def is_file_submission(self):
+        """Check if this is a file-based submission (File only or both)"""
+        return self.submission_type in [self.SubmissionType.FILE, self.SubmissionType.BOTH]
+
+    @property
+    def is_both_submission(self):
+        """Check if this submission includes both URL and file"""
+        return self.submission_type == self.SubmissionType.BOTH
+
+    @property
+    def has_valid_submission(self):
+        """Check if submission has valid content based on type"""
+        if self.submission_type == self.SubmissionType.URL:
+            return bool(self.repository_url)
+        elif self.submission_type == self.SubmissionType.FILE:
+            return bool(self.project_file)
+        elif self.submission_type == self.SubmissionType.BOTH:
+            return bool(self.repository_url) and bool(self.project_file)
+        return False
+
     def can_user_view(self, user):
         """
         Check if a user can view this submission.
@@ -295,7 +359,7 @@ class ProjectSubmission(models.Model):
         if user.is_teacher and self.classroom.teacher == user:
             return True
         return self.collaborators.filter(pk=user.pk).exists()
-    
+
     def can_user_edit(self, user):
         """
         Check if a user can edit this submission.
@@ -305,7 +369,7 @@ class ProjectSubmission(models.Model):
         if not self.is_editable:
             return False
         return self.collaborators.filter(pk=user.pk).exists()
-    
+
     def submit(self):
         """
         Submit the project.
@@ -317,7 +381,7 @@ class ProjectSubmission(models.Model):
             self.save(update_fields=['status', 'submitted_at', 'updated_at'])
             return True
         return False
-    
+
     def assign_grade(self, grade, notes=''):
         """
         Assign a grade to the submission.
@@ -329,10 +393,10 @@ class ProjectSubmission(models.Model):
             self.save(update_fields=['grade', 'teacher_notes', 'updated_at'])
             return True
         return False
-    
+
     def get_collaborator_names(self):
         """Get a comma-separated list of collaborator names"""
         return ', '.join([
-            c.get_full_name() or c.username 
+            c.get_full_name() or c.username
             for c in self.collaborators.all()
         ])

@@ -33,7 +33,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    
+
     # Local apps
     'submissions',
 ]
@@ -156,24 +156,23 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = False
 
 
 # =============================================================================
-# EMAIL SETTINGS
+# EMAIL SETTINGS (Mailjet API)
 # =============================================================================
 
 # Enable/disable email notifications globally
 ENABLE_EMAIL_NOTIFICATIONS = True
 
 # Site information for email templates
-SITE_NAME = 'University Project Platform'
-SITE_URL = 'http://localhost:8000'  # Change to your production URL
+SITE_NAME = 'Draft2Done'
+SITE_URL = os.environ.get("SITE_URL")
 
-# Development: Console backend (prints emails to console)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# Mailjet API credentials
+MAILJET_API_KEY = os.environ.get("MAILJET_API_KEY")
+MAILJET_SECRET_KEY = os.environ.get("MAILJET_SECRET_KEY")
 
-# Default sender email
-DEFAULT_FROM_EMAIL = 'University Project Platform <noreply@university.edu>'
-
-# Email timeout (seconds)
-EMAIL_TIMEOUT = 10
+# Email sender configuration
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL")
+DEFAULT_FROM_NAME = os.environ.get("DEFAULT_FROM_NAME", "Draft2Done")
 
 
 # =============================================================================
@@ -210,4 +209,3 @@ LOGGING = {
         },
     },
 }
-

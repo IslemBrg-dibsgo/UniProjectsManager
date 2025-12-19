@@ -1,0 +1,71 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Reminder: Submit Your Project{% endblock %}
+
+{% block content %}
+<h2>Don't Forget to Submit Your Project! ⏰</h2>
+
+<p>Hello,</p>
+
+<p>This is a friendly reminder that you have an unsubmitted project draft. Don't let your hard work go unnoticed!</p>
+
+<div class="info-box">
+    <h3>{{ project_title }}</h3>
+    <p>Classroom: {{ classroom_title }}</p>
+</div>
+
+<table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="margin: 20px 0;">
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Status</span>
+            <span style="display: inline-block; padding: 4px 12px; background-color: #fef3c7; color: #92400e; font-size: 12px; font-weight: 600; border-radius: 9999px;">Draft</span>
+        </td>
+    </tr>
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Created On</span>
+            <span style="color: #1a1a2e; font-size: 14px;">{{ created_at|date:"F d, Y \a\t H:i" }}</span>
+        </td>
+    </tr>
+</table>
+
+<div class="alert alert-warning">
+    <strong>Action Required:</strong> Your project is still in draft status. Please review and submit it when you're ready for your teacher to review it.
+</div>
+
+<div style="margin: 30px 0;">
+    <h3 style="color: #1a1a2e; font-size: 16px; margin-bottom: 16px;">Before submitting, make sure you have:</h3>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ☐ Added all collaborators to the project
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ☐ Provided a valid repository URL
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ☐ Included a deployed URL (if applicable)
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ☐ Written a clear project description
+            </td>
+        </tr>
+    </table>
+</div>
+
+<p style="margin-top: 24px; text-align: center;">
+    <a href="{{ edit_url }}" class="btn">Edit & Submit Project</a>
+    <a href="{{ submission_url }}" class="btn btn-secondary">View Details</a>
+</p>
+
+<p style="margin-top: 24px; color: #64748b; font-size: 14px; text-align: center;">
+    Once you submit, your teacher will be notified and can begin reviewing your work.
+</p>
+{% endblock %}
+

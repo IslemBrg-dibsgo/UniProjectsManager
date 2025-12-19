@@ -189,6 +189,11 @@ class DashboardView(LoginRequiredMixin, TemplateView):
                 submitted_count=Count('submissions', filter=Q(
                     submissions__status=ProjectSubmission.Status.SUBMITTED), distinct=True),
             )
+            context['pending_submissions'] = ProjectSubmission.objects.filter(
+                classroom__teacher=user,
+                status=ProjectSubmission.Status.SUBMITTED,
+                grade__isnull=True
+            ).count()
             context['classrooms'] = classrooms[:5]
             context['total_classrooms'] = classrooms.count()
             context['total_students'] = ClassroomMembership.objects.filter(
@@ -441,6 +446,8 @@ class SubmissionDetailView(LoginRequiredMixin, SubmissionAccessMixin, DetailView
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         submission = self.get_object()
+        if submission.project_file:
+            context['project_file_name'] = submission.project_file.name.split('/')[-1]
         user = self.request.user
 
         context['can_edit'] = submission.can_user_edit(user)
@@ -509,6 +516,7 @@ class SubmissionUpdateView(LoginRequiredMixin, SubmissionEditMixin, SuccessMessa
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
+        context['project_file_name'] = self.object.project_file.name.split('/')[-1]
         context['classroom'] = self.object.classroom
         context['title'] = 'Edit Project Submission'
         context['submit_text'] = 'Save Changes'
@@ -673,7 +681,10 @@ class GradeSubmissionView(LoginRequiredMixin, TeacherRequiredMixin, SuccessMessa
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['submission'] = self.get_object()
+        context_submission = self.get_object()
+        context['submission'] = context_submission
+        if context_submission.project_file:
+            context['project_file_name'] = context_submission.project_file.name.split('/')[-1]
         return context
 
     def get_success_url(self):

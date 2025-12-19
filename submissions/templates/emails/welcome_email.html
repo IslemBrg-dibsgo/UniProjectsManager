@@ -1,0 +1,94 @@
+{% extends 'emails/base_email.html' %}
+
+{% block title %}Welcome to {{ site_name }}{% endblock %}
+
+{% block content %}
+<h2>Welcome to {{ site_name }}! 🎉</h2>
+
+<p>Hello {{ user_name }},</p>
+
+<p>Thank you for joining our University Project Submission Platform. We're excited to have you on board!</p>
+
+<div class="info-box">
+    <h3>Your Account is Ready</h3>
+    <p>You've been registered as a <strong>{% if is_teacher %}Teacher{% else %}Student{% endif %}</strong>.</p>
+</div>
+
+{% if is_teacher %}
+<div style="margin: 30px 0;">
+    <h3 style="color: #1a1a2e; font-size: 16px; margin-bottom: 16px;">As a Teacher, you can:</h3>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ Create and manage classrooms
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ Share join codes with your students
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ Review and grade project submissions
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ Provide feedback to students
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="alert alert-info">
+    <strong>Get Started:</strong> Create your first classroom and share the join code with your students!
+</div>
+
+<p style="margin-top: 24px;">
+    <a href="{{ create_classroom_url }}" class="btn">Create Your First Classroom</a>
+    <a href="{{ dashboard_url }}" class="btn btn-secondary">Go to Dashboard</a>
+</p>
+
+{% else %}
+<div style="margin: 30px 0;">
+    <h3 style="color: #1a1a2e; font-size: 16px; margin-bottom: 16px;">As a Student, you can:</h3>
+    <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%">
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ Join classrooms using join codes from your teachers
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ Create and submit project submissions
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ Collaborate with other students on projects
+            </td>
+        </tr>
+        <tr>
+            <td style="padding: 10px 0; color: #475569; font-size: 14px;">
+                ✓ View your grades and teacher feedback
+            </td>
+        </tr>
+    </table>
+</div>
+
+<div class="alert alert-info">
+    <strong>Get Started:</strong> Ask your teacher for a classroom join code to get started!
+</div>
+
+<p style="margin-top: 24px;">
+    <a href="{{ join_classroom_url }}" class="btn">Join a Classroom</a>
+    <a href="{{ dashboard_url }}" class="btn btn-secondary">Go to Dashboard</a>
+</p>
+{% endif %}
+
+<p style="margin-top: 24px; color: #64748b; font-size: 14px;">
+    If you have any questions or need assistance, please don't hesitate to reach out to your platform administrator.
+</p>
+{% endblock %}
+

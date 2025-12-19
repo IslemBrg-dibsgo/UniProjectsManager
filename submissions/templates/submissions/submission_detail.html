@@ -57,7 +57,8 @@
                 <h5>Project Description</h5>
                 <p class="mb-4">{{ submission.description|linebreaks }}</p>
                 
-                <h5>Links</h5>
+                {% if submission.is_url_submission and submission.repository_url %}
+                <h5>{% if submission.is_both_submission %}Repository Links{% else %}Links{% endif %}</h5>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
                         <div class="border rounded p-3">
@@ -86,6 +87,31 @@
                     </div>
                     {% endif %}
                 </div>
+                {% endif %}
+                
+                {% if submission.is_file_submission and submission.project_file %}
+                <h5>Project File</h5>
+                <div class="mb-4">
+                    <div class="border rounded p-3 bg-light">
+                        <div class="d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center">
+                                <i class="bi bi-file-earmark-zip fs-3 me-3 text-primary"></i>
+                                <div>
+                                    <strong>{{ project_file_name }}</strong>
+                                    {% if submission.project_file.size %}
+                                    <br><small class="text-muted">
+                                        Size: {{ submission.project_file.size|filesizeformat }}
+                                    </small>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <a href="{{ submission.project_file.url }}" target="_blank" class="btn btn-primary">
+                                <i class="bi bi-eye me-2"></i>View
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
                 
                 <h5>Collaborators</h5>
                 <div class="d-flex flex-wrap gap-2">
@@ -197,12 +223,12 @@
                 </div>
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Created</span>
-                    <span>{{ submission.created_at|date:"M d, Y" }}</span>
+                    <span>{{ submission.created_at|date:"M d, Y, g:i A"  }}</span>
                 </div>
                 {% if submission.submitted_at %}
                 <div class="d-flex justify-content-between mb-2">
                     <span class="text-muted">Submitted</span>
-                    <span>{{ submission.submitted_at|date:"M d, Y" }}</span>
+                    <span>{{ submission.submitted_at|date:"M d, Y, g:i A" }}</span>
                 </div>
                 {% endif %}
                 <div class="d-flex justify-content-between">

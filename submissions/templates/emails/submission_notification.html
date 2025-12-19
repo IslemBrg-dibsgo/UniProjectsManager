@@ -37,6 +37,17 @@
             </span>
         </td>
     </tr>
+    {% if is_both_submission %}
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Submission Type</span>
+            <span style="color: #1a1a2e; font-size: 14px;">
+                <span style="color: #10b981;">✓ URL and File</span>
+            </span>
+        </td>
+    </tr>
+    {% endif %}
+    {% if is_url_submission and repository_url %}
     <tr>
         <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
             <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Repository</span>
@@ -51,6 +62,17 @@
             <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Live Demo</span>
             <span style="color: #1a1a2e; font-size: 14px;">
                 <a href="{{ deployed_url }}" style="color: #4f46e5; text-decoration: none;">{{ deployed_url|truncatechars:40 }}</a>
+            </span>
+        </td>
+    </tr>
+    {% endif %}
+    {% endif %}
+    {% if is_file_submission and has_project_file %}
+    <tr>
+        <td style="padding: 12px 0; border-bottom: 1px solid #e2e8f0;">
+            <span style="font-weight: 600; color: #64748b; font-size: 13px; text-transform: uppercase; display: inline-block; width: 140px;">Project File</span>
+            <span style="color: #1a1a2e; font-size: 14px;">
+                <span style="color: #10b981;">✓ File Uploaded</span>
             </span>
         </td>
     </tr>

@@ -154,7 +154,9 @@
                                 <td>
                                     <strong>{{ submission.title }}</strong>
                                     <br>
-                                    <small class="text-muted">{{ submission.created_at|date:"M d, Y" }}</small>
+                                    <small class="text-muted">
+                                        {{ submission.submitted_at|date:"M d, Y, g:i A" }}
+                                    </small>
                                 </td>
                                 <td>{{ submission.created_by.get_full_name|default:submission.created_by.username }}</td>
                                 <td>
