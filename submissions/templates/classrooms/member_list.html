@@ -25,6 +25,40 @@
     {% endif %}
 </div>
 
+<!-- Filters -->
+<div class="card mb-4">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label small text-muted" for="id_student">Student Name</label>
+                {{ filter_form.student }}
+            </div>
+            <div class="col-md-3">
+                <label class="form-label small text-muted" for="id_submission_status">Submission Status</label>
+                {{ filter_form.submission_status }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted" for="id_grade_min">Min Grade</label>
+                {{ filter_form.grade_min }}
+            </div>
+            <div class="col-md-2">
+                <label class="form-label small text-muted" for="id_grade_max">Max Grade</label>
+                {{ filter_form.grade_max }}
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-funnel"></i>
+                </button>
+                {% if request.GET %}
+                <a href="{% url 'classroom_members' classroom.pk %}" class="btn btn-outline-secondary" title="Clear filters">
+                    <i class="bi bi-x-lg"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
 {% if memberships %}
 <div class="card">
     <div class="table-responsive">
@@ -59,22 +93,20 @@
                     <td>{{ membership.joined_at|date:"M d, Y" }}</td>
                     <td>
                         {% if membership.submission %}
-                          {% if membership.submission.grade %}
-                            <span class="badge badge-graded">{{ membership.submission.grade }}/20</span>
-                          {% elif membership.submission.status == 'SUBMITTED' %}
-                            <span class="badge badge-submitted">Submitted</span>
-                          {% else %}
-                            <span class="badge badge-draft">Draft</span>
-                          {% endif %}
+                            {% if membership.submission.grade %}
+                                <span class="badge badge-graded">{{ membership.submission.grade }}/20</span>
+                            {% elif membership.submission.status == 'SUBMITTED' %}
+                                <span class="badge badge-submitted">Submitted</span>
+                            {% else %}
+                                <span class="badge badge-draft">Draft</span>
+                            {% endif %}
                         {% else %}
-                          <span class="text-muted">--</span>
+                            <span class="text-muted">--</span>
                         {% endif %}
-                      </td>                      
+                    </td>
                     {% if is_owner %}
                     <td>
-                        <a href="{% url 'classroom_remove_member' classroom.pk membership.student.pk %}" 
-                           class="btn btn-sm btn-outline-danger"
-                           title="Remove from classroom">
+                        <a href="{% url 'classroom_remove_member' classroom.pk membership.student.pk %}" class="btn btn-sm btn-outline-danger" title="Remove from classroom">
                             <i class="bi bi-person-x"></i>
                         </a>
                     </td>
@@ -88,29 +120,27 @@
 
 <!-- Pagination -->
 {% if page_obj.has_other_pages %}
-<nav class="mt-4">
+<nav class="mt-4" aria-label="Members pagination">
     <ul class="pagination justify-content-center">
         {% if page_obj.has_previous %}
         <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                 <i class="bi bi-chevron-left"></i> Previous
             </a>
         </li>
         {% endif %}
-        
         {% for num in page_obj.paginator.page_range %}
             {% if page_obj.number == num %}
             <li class="page-item active"><span class="page-link">{{ num }}</span></li>
             {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
             <li class="page-item">
-                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+                <a class="page-link" href="?page={{ num }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">{{ num }}</a>
             </li>
             {% endif %}
         {% endfor %}
-        
         {% if page_obj.has_next %}
         <li class="page-item">
-            <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% for key, value in request.GET.items %}{% if key != 'page' %}&{{ key }}={{ value }}{% endif %}{% endfor %}">
                 Next <i class="bi bi-chevron-right"></i>
             </a>
         </li>
@@ -122,12 +152,23 @@
 {% else %}
 <div class="card">
     <div class="card-body empty-state">
+        {% if request.GET.student or request.GET.submission_status or request.GET.grade_min or request.GET.grade_max %}
+        <i class="bi bi-search"></i>
+        <h5>No Results Found</h5>
+        <p>No students match your current filters</p>
+        <div class="mt-3">
+            <a href="{% url 'classroom_members' classroom.pk %}" class="btn btn-primary">
+                <i class="bi bi-x-lg me-1"></i> Clear Filters
+            </a>
+        </div>
+        {% else %}
         <i class="bi bi-people"></i>
         <h5>No Students Enrolled</h5>
         <p>Share the join code with students to let them enroll</p>
         <div class="mt-3">
             <code class="fs-4 bg-light px-4 py-2 rounded">{{ classroom.join_code }}</code>
         </div>
+        {% endif %}
     </div>
 </div>
 {% endif %}

@@ -23,7 +23,7 @@ from .forms import (
     ClassroomCreateForm, ClassroomUpdateForm, JoinClassroomForm,
     ProjectSubmissionCreateForm, ProjectSubmissionUpdateForm,
     ProjectSubmitForm, GradeSubmissionForm,
-    SubmissionFilterForm, ClassroomFilterForm
+    SubmissionFilterForm, ClassroomFilterForm, MemberFilterForm
 )
 from pprint import pprint
 import json
@@ -306,7 +306,7 @@ class ClassroomDetailView(LoginRequiredMixin, ClassroomMemberMixin, DetailView):
             classroom=classroom
         ).select_related('student')[:10]
         context['member_count'] = classroom.get_student_count()
-        
+
         # Get students who have NOT created any project (as owner or collaborator) for this classroom
         classroom_submissions = ProjectSubmission.objects.filter(
             classroom=classroom)
@@ -754,13 +754,20 @@ class ClassroomMemberListView(LoginRequiredMixin, ClassroomMemberMixin, ListView
         ).select_related('student').prefetch_related(
             Prefetch(
                 'student__created_submissions',
-                queryset=ProjectSubmission.objects.filter(classroom=self.classroom)
+                queryset=ProjectSubmission.objects.filter(
+                    classroom=self.classroom)
             ),
             Prefetch(
                 'student__project_collaborations',
-                queryset=ProjectSubmission.objects.filter(classroom=self.classroom)
+                queryset=ProjectSubmission.objects.filter(
+                    classroom=self.classroom)
             )
         ).order_by('student__last_name', 'student__first_name')
+
+        # Apply filters
+        self.filter_form = MemberFilterForm(
+            self.request.GET, classroom=self.classroom)
+        qs = self.filter_form.filter_queryset(qs)
 
         # Compute the first submission for each membership
         for membership in qs:
@@ -771,11 +778,11 @@ class ClassroomMemberListView(LoginRequiredMixin, ClassroomMemberMixin, ListView
 
         return qs
 
-
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['classroom'] = self.classroom
         context['is_owner'] = self.request.user == self.classroom.teacher
+        context['filter_form'] = self.filter_form
         context['total_memberships'] = context['paginator'].count
         return context
 

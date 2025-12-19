@@ -453,7 +453,8 @@ class ProjectSubmissionUpdateForm(forms.ModelForm):
                 raise ValidationError('File size must not exceed 10MB.')
 
             # Check file extension
-            valid_extensions = ['.zip', '.rar', '.7z', '.tar', '.gz', '.pdf', '.doc', '.docx']
+            valid_extensions = ['.zip', '.rar', '.7z',
+                                '.tar', '.gz', '.pdf', '.doc', '.docx']
             file_name = file.name.lower()
             if not any(file_name.endswith(ext) for ext in valid_extensions):
                 raise ValidationError(
@@ -643,7 +644,8 @@ class SubmissionFilterForm(forms.Form):
         if status == 'GRADED':
             queryset = queryset.exclude(grade__isnull=True)
         elif status == 'SUBMITTED':
-            queryset = queryset.filter(status=ProjectSubmission.Status.SUBMITTED, grade__isnull=True)
+            queryset = queryset.filter(
+                status=ProjectSubmission.Status.SUBMITTED, grade__isnull=True)
         elif status:
             queryset = queryset.filter(status=status)
 
@@ -695,5 +697,142 @@ class ClassroomFilterForm(forms.Form):
                 Q(teacher__first_name__icontains=search) |
                 Q(teacher__last_name__icontains=search)
             )
+
+        return queryset
+
+
+class MemberFilterForm(forms.Form):
+    """
+    Filter form for classroom member lists.
+    Supports filtering by student name, submission status, and grade range.
+    """
+    STATUS_CHOICES = [
+        ('', 'All Submissions'),
+        ('NONE', 'No Submission'),
+        ('DRAFT', 'Draft'),
+        ('SUBMITTED', 'Submitted'),
+        ('GRADED', 'Graded'),
+    ]
+
+    student = forms.CharField(
+        required=False,
+        widget=forms.TextInput(attrs={
+            'id': 'id_student',
+            'class': 'form-control',
+            'placeholder': 'Search by student name...'
+        })
+    )
+    submission_status = forms.ChoiceField(
+        choices=STATUS_CHOICES,
+        required=False,
+        widget=forms.Select(attrs={
+            'id': 'id_submission_status',
+            'class': 'form-select'
+        })
+    )
+    grade_min = forms.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=20,
+        widget=forms.NumberInput(attrs={
+            'id': 'id_grade_min',
+            'class': 'form-control',
+            'placeholder': 'Min',
+            'min': 1,
+            'max': 20
+        })
+    )
+    grade_max = forms.IntegerField(
+        required=False,
+        min_value=1,
+        max_value=20,
+        widget=forms.NumberInput(attrs={
+            'id': 'id_grade_max',
+            'class': 'form-control',
+            'placeholder': 'Max',
+            'min': 1,
+            'max': 20
+        })
+    )
+
+    def __init__(self, *args, classroom=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.classroom = classroom
+
+    def filter_queryset(self, queryset):
+        """Apply filters to the queryset"""
+        if not self.is_valid():
+            return queryset
+
+        data = self.cleaned_data
+
+        # Filter by student name
+        student = data.get('student')
+        if student:
+            queryset = queryset.filter(
+                Q(student__username__icontains=student) |
+                Q(student__first_name__icontains=student) |
+                Q(student__last_name__icontains=student)
+            )
+
+        # Filter by submission status (scoped to this classroom)
+        submission_status = data.get('submission_status')
+        if submission_status and self.classroom:
+            if submission_status == 'NONE':
+                # Students with no submission in this classroom
+                queryset = queryset.exclude(
+                    Q(student__created_submissions__classroom=self.classroom) |
+                    Q(student__project_collaborations__classroom=self.classroom)
+                )
+            elif submission_status == 'GRADED':
+                # Students with graded submissions in this classroom
+                queryset = queryset.filter(
+                    Q(student__created_submissions__classroom=self.classroom,
+                      student__created_submissions__grade__isnull=False) |
+                    Q(student__project_collaborations__classroom=self.classroom,
+                      student__project_collaborations__grade__isnull=False)
+                ).distinct()
+            elif submission_status == 'SUBMITTED':
+                # Students with submitted but not graded submissions in this classroom
+                queryset = queryset.filter(
+                    Q(student__created_submissions__classroom=self.classroom,
+                      student__created_submissions__status=ProjectSubmission.Status.SUBMITTED,
+                      student__created_submissions__grade__isnull=True) |
+                    Q(student__project_collaborations__classroom=self.classroom,
+                      student__project_collaborations__status=ProjectSubmission.Status.SUBMITTED,
+                      student__project_collaborations__grade__isnull=True)
+                ).distinct()
+            elif submission_status == 'DRAFT':
+                # Students with draft submissions in this classroom
+                queryset = queryset.filter(
+                    Q(student__created_submissions__classroom=self.classroom,
+                      student__created_submissions__status=ProjectSubmission.Status.DRAFT) |
+                    Q(student__project_collaborations__classroom=self.classroom,
+                      student__project_collaborations__status=ProjectSubmission.Status.DRAFT)
+                ).distinct()
+
+        # Filter by grade range (scoped to this classroom)
+        grade_min = data.get('grade_min')
+        grade_max = data.get('grade_max')
+        if (grade_min is not None or grade_max is not None) and self.classroom:
+            # Build filters for created submissions
+            created_filter = Q(
+                student__created_submissions__classroom=self.classroom)
+            collab_filter = Q(
+                student__project_collaborations__classroom=self.classroom)
+
+            if grade_min is not None:
+                created_filter &= Q(
+                    student__created_submissions__grade__gte=grade_min)
+                collab_filter &= Q(
+                    student__project_collaborations__grade__gte=grade_min)
+            if grade_max is not None:
+                created_filter &= Q(
+                    student__created_submissions__grade__lte=grade_max)
+                collab_filter &= Q(
+                    student__project_collaborations__grade__lte=grade_max)
+
+            queryset = queryset.filter(
+                created_filter | collab_filter).distinct()
 
         return queryset
